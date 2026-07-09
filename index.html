@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2563eb" />
+    <title>Gestor de Gastos Personales</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand__icon" aria-hidden="true">💰</span>
+        <div>
+          <h1>Gestor de Gastos</h1>
+          <p>Finanzas personales offline</p>
+        </div>
+      </div>
+      <div class="header-balance">
+        <span>Saldo actual</span>
+        <strong id="headerBalance">$0.00</strong>
+      </div>
+      <button class="icon-button" id="settingsButton" type="button" aria-label="Abrir configuracion">
+        ⚙️
+      </button>
+    </header>
+
+    <main class="app-shell">
+      <section class="summary-grid" aria-label="Resumen financiero">
+        <article class="summary-card summary-card--primary">
+          <span>Saldo total</span>
+          <strong id="totalBalance">$0.00</strong>
+          <small>Ingresos menos gastos</small>
+        </article>
+        <article class="summary-card">
+          <span>Ingresos</span>
+          <strong id="totalIncome">$0.00</strong>
+          <small>Historico registrado</small>
+        </article>
+        <article class="summary-card">
+          <span>Gastos</span>
+          <strong id="totalExpenses">$0.00</strong>
+          <small>Historico registrado</small>
+        </article>
+        <article class="summary-card">
+          <span>Balance del mes</span>
+          <strong id="monthlyBalance">$0.00</strong>
+          <small id="monthRangeLabel">Mes actual</small>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <section class="panel movements-panel">
+          <div class="panel__header">
+            <div>
+              <h2>Movimientos</h2>
+              <p>Busca, filtra y ordena tus ingresos y gastos.</p>
+            </div>
+          </div>
+
+          <form class="filters" id="filtersForm">
+            <label>
+              Buscar
+              <input id="searchInput" type="search" placeholder="Descripcion, nota o metodo" />
+            </label>
+            <label>
+              Mes
+              <input id="monthFilter" type="month" />
+            </label>
+            <label>
+              Categoria
+              <select id="categoryFilter"></select>
+            </label>
+            <label>
+              Tipo
+              <select id="typeFilter">
+                <option value="all">Todos</option>
+                <option value="income">Ingresos</option>
+                <option value="expense">Gastos</option>
+              </select>
+            </label>
+            <label>
+              Ordenar
+              <select id="sortSelect">
+                <option value="date-desc">Fecha reciente</option>
+                <option value="date-asc">Fecha antigua</option>
+                <option value="amount-desc">Monto mayor</option>
+                <option value="amount-asc">Monto menor</option>
+              </select>
+            </label>
+          </form>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Detalle</th>
+                  <th>Categoria</th>
+                  <th>Monto</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="transactionsTable"></tbody>
+            </table>
+          </div>
+          <p class="empty-state" id="emptyTransactions" hidden>
+            No hay movimientos con esos filtros. El lienzo financiero espera su primera pincelada.
+          </p>
+        </section>
+
+        <aside class="panel charts-panel">
+          <div class="panel__header">
+            <div>
+              <h2>Estadisticas</h2>
+              <p>Vista rapida de tus patrones.</p>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Gastos por categoria</h3>
+            <canvas id="categoryChart" width="420" height="260"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Ingresos vs gastos</h3>
+            <canvas id="incomeExpenseChart" width="420" height="260"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Evolucion del saldo</h3>
+            <canvas id="balanceChart" width="420" height="260"></canvas>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <button class="floating-button" id="addTransactionButton" type="button" aria-label="Agregar movimiento">
+      +
+    </button>
+
+    <dialog class="modal" id="transactionModal">
+      <form class="modal__content" id="transactionForm" method="dialog">
+        <div class="modal__header">
+          <h2 id="transactionModalTitle">Nuevo movimiento</h2>
+          <button class="icon-button" type="button" data-close-modal="transactionModal" aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+        <input id="transactionId" type="hidden" />
+        <div class="form-grid">
+          <label>
+            Tipo
+            <select id="transactionType" required>
+              <option value="income">Ingreso</option>
+              <option value="expense">Gasto</option>
+            </select>
+          </label>
+          <label>
+            Monto
+            <input id="transactionAmount" type="number" min="0.01" step="0.01" required />
+          </label>
+          <label>
+            Categoria
+            <select id="transactionCategory" required></select>
+          </label>
+          <label>
+            Fecha
+            <input id="transactionDate" type="date" required />
+          </label>
+          <label class="form-grid__wide">
+            Descripcion
+            <input id="transactionDescription" type="text" maxlength="80" required />
+          </label>
+          <label>
+            Metodo de pago
+            <input id="transactionPayment" type="text" maxlength="40" placeholder="Opcional" />
+          </label>
+          <label class="form-grid__wide">
+            Notas
+            <textarea id="transactionNotes" rows="3" maxlength="240" placeholder="Opcional"></textarea>
+          </label>
+        </div>
+        <div class="modal__actions">
+          <button class="button button--ghost" type="button" data-close-modal="transactionModal">Cancelar</button>
+          <button class="button button--primary" type="submit">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="settingsModal">
+      <form class="modal__content modal__content--wide" id="settingsForm" method="dialog">
+        <div class="modal__header">
+          <h2>Configuracion</h2>
+          <button class="icon-button" type="button" data-close-modal="settingsModal" aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+
+        <section class="settings-grid">
+          <div class="settings-block">
+            <h3>Preferencias</h3>
+            <label>
+              Tema
+              <select id="themeSelect">
+                <option value="light">Claro</option>
+                <option value="dark">Oscuro</option>
+              </select>
+            </label>
+            <label>
+              Moneda
+              <select id="currencySelect">
+                <option value="USD">USD - Dolar</option>
+                <option value="DOP">DOP - Peso dominicano</option>
+              </select>
+            </label>
+            <label>
+              Inicio del mes financiero
+              <select id="financialStartDay"></select>
+            </label>
+          </div>
+
+          <div class="settings-block">
+            <h3>Categorias</h3>
+            <div class="category-form">
+              <input id="categoryId" type="hidden" />
+              <input id="categoryName" type="text" maxlength="32" placeholder="Nombre" />
+              <input id="categoryIcon" type="text" maxlength="3" placeholder="Icono" />
+              <input id="categoryColor" type="color" value="#2563eb" aria-label="Color" />
+              <button class="button button--primary" id="saveCategoryButton" type="button">Guardar</button>
+            </div>
+            <div class="category-list" id="categoriesList"></div>
+          </div>
+
+          <div class="settings-block">
+            <h3>Respaldo</h3>
+            <div class="backup-actions">
+              <button class="button button--secondary" id="exportButton" type="button">Exportar JSON</button>
+              <label class="button button--secondary" for="importInput">Importar JSON</label>
+              <input id="importInput" type="file" accept="application/json,.json" hidden />
+              <button class="button button--danger" id="clearDataButton" type="button">Eliminar todo</button>
+            </div>
+            <p class="hint">Tus datos viven solamente en este navegador mediante LocalStorage.</p>
+          </div>
+        </section>
+
+        <div class="modal__actions">
+          <button class="button button--primary" type="submit">Aplicar cambios</button>
+        </div>
+      </form>
+    </dialog>
+
+    <template id="transactionRowTemplate">
+      <tr>
+        <td data-cell="date"></td>
+        <td>
+          <strong data-cell="description"></strong>
+          <small data-cell="notes"></small>
+        </td>
+        <td data-cell="category"></td>
+        <td data-cell="amount"></td>
+        <td class="table-actions">
+          <button class="small-button" data-action="edit" type="button">Editar</button>
+          <button class="small-button small-button--danger" data-action="delete" type="button">Eliminar</button>
+        </td>
+      </tr>
+    </template>
+
+    <script src="js/bundle.js"></script>
+  </body>
+</html>
