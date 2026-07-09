@@ -1,0 +1,10 @@
+{
+  "name": "Gestor de Gastos Personales",
+  "short_name": "Gastos",
+  "description": "Aplicacion local y offline para gestionar finanzas personales.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#2563eb",
+  "icons": []
+}
