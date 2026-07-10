@@ -5,23 +5,22 @@
   const STORAGE_KEY = "personal-expense-manager:v1";
 
   const defaultCategories = [
-    { id: "salary", name: "Salario", icon: "ðŸ’¼", color: "#16a34a" },
-    { id: "food", name: "Comida", icon: "ðŸ½ï¸", color: "#f97316" },
-    { id: "transport", name: "Transporte", icon: "ðŸšŒ", color: "#0ea5e9" },
-    { id: "home", name: "Hogar", icon: "ðŸ ", color: "#8b5cf6" },
-    { id: "health", name: "Salud", icon: "ðŸ©º", color: "#ef4444" },
-    { id: "fun", name: "Ocio", icon: "ðŸŽ®", color: "#ec4899" },
-    { id: "savings", name: "Ahorro", icon: "ðŸ–", color: "#14b8a6" },
-    { id: "other", name: "Otros", icon: "âœ¨", color: "#64748b" },
+    { id: "salary", name: "Salario", icon: "💵", color: "#16a34a" },
+    { id: "food", name: "Comida", icon: "🍔¸", color: "#f97316" },
+    { id: "transport", name: "Transporte", icon: "🚗", color: "#0ea5e9" },
+    { id: "home", name: "Hogar", icon: "🏠 ", color: "#8b5cf6" },
+    { id: "fun", name: "Ocio", icon: "🏖️", color: "#ec4899" },
+    { id: "savings", name: "Ahorro", icon: "💰", color: "#14b8a6" },
+    { id: "other", name: "Otros", icon: "🤷‍", color: "#64748b" },
   ];
 
   const defaultSettings = {
     theme: "light",
-    currency: "USD",
+    currency: "DOP",
     financialStartDay: 1,
   };
 
-  const supportedCurrencies = new Set(["USD", "DOP"]);
+  const supportedCurrencies = new Set(["DOP", "USD"]);
 
   function createDefaultState() {
     return {
