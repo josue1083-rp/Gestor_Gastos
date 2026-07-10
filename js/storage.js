@@ -12,12 +12,12 @@ const defaultCategories = [
 ];
 
 const defaultSettings = {
-  theme: "light",
-  currency: "USD",
+  theme: "dark",
+  currency: "DOP",
   financialStartDay: 1,
 };
 
-const supportedCurrencies = new Set(["USD", "DOP"]);
+const supportedCurrencies = new Set(["DOP", "USD"]);
 
 export function createDefaultState() {
   return {
@@ -126,7 +126,7 @@ function normalizeCategory(category) {
   return {
     id: String(category.id || createId()),
     name: String(category.name || "Categoria").trim(),
-    icon: String(category.icon || "✨").trim().slice(0, 3),
+    icon: String(category.icon || "✨").trim(),
     color: /^#[0-9a-f]{6}$/i.test(category.color) ? category.color : "#64748b",
   };
 }
