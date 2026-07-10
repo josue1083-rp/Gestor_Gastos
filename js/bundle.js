@@ -6,16 +6,16 @@
 
   const defaultCategories = [
     { id: "salary", name: "Salario", icon: "💵", color: "#16a34a" },
-    { id: "food", name: "Comida", icon: "🍔¸", color: "#f97316" },
+    { id: "food", name: "Comida", icon: "🍔", color: "#f97316" },
     { id: "transport", name: "Transporte", icon: "🚗", color: "#0ea5e9" },
-    { id: "home", name: "Hogar", icon: "🏠 ", color: "#8b5cf6" },
+    { id: "home", name: "Hogar", icon: "🏠", color: "#8b5cf6" },
     { id: "fun", name: "Ocio", icon: "🏖️", color: "#ec4899" },
     { id: "savings", name: "Ahorro", icon: "💰", color: "#14b8a6" },
     { id: "other", name: "Otros", icon: "🤷‍", color: "#64748b" },
   ];
 
   const defaultSettings = {
-    theme: "light",
+    theme: "dark",
     currency: "DOP",
     financialStartDay: 1,
   };
