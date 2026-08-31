@@ -71,7 +71,8 @@ function bindEvents() {
 
   elements.transactionForm.addEventListener("submit", handleTransactionSubmit);
   elements.settingsForm.addEventListener("submit", handleSettingsSubmit);
-  elements.filtersForm.addEventListener("input", renderTransactions);
+  const debouncedRenderTransactions = debounce(renderTransactions, 250);
+  elements.filtersForm.addEventListener("input", debouncedRenderTransactions);
   elements.filtersForm.addEventListener("change", renderTransactions);
   elements.transactionType.addEventListener("change", populateTransactionCategories);
   elements.saveCategoryButton.addEventListener("click", handleCategorySave);
@@ -102,6 +103,19 @@ function renderDashboard() {
   elements.monthRangeLabel.textContent = totals.monthRangeLabel;
 }
 
+function escapeHTML(str) {
+  if (typeof str !== "string") return str;
+  return str.replace(/[&<>'"]/g, 
+    (tag) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[tag] || tag)
+  );
+}
+
 function renderTransactions() {
   const transactions = filterTransactions(state.transactions, getFilters());
   elements.transactionsTable.replaceChildren();
@@ -115,8 +129,8 @@ function renderTransactions() {
     row.querySelector('[data-cell="description"]').textContent = transaction.description;
     row.querySelector('[data-cell="notes"]').textContent = buildNotes(transaction);
     row.querySelector('[data-cell="category"]').innerHTML = `
-      <span class="category-pill" style="border: 1px solid ${category.color}33">
-        <span>${category.icon}</span><span>${category.name}</span>
+      <span class="category-pill" style="border: 1px solid ${escapeHTML(category.color)}33">
+        <span>${escapeHTML(category.icon)}</span><span>${escapeHTML(category.name)}</span>
       </span>
     `;
     const amountCell = row.querySelector('[data-cell="amount"]');
@@ -134,8 +148,8 @@ function renderCategories() {
     item.dataset.id = category.id;
     item.innerHTML = `
       <div class="category-item__meta">
-        <span class="color-dot" style="background:${category.color}"></span>
-        <strong>${category.icon} ${category.name}</strong>
+        <span class="color-dot" style="background:${escapeHTML(category.color)}"></span>
+        <strong>${escapeHTML(category.icon)} ${escapeHTML(category.name)}</strong>
       </div>
       <div class="table-actions">
         <button class="small-button" type="button" data-action="edit-category">Editar</button>
@@ -154,7 +168,7 @@ function renderSettings() {
 
 function populateCategorySelects() {
   const categoryOptions = state.categories
-    .map((category) => `<option value="${category.id}">${category.icon} ${category.name}</option>`)
+    .map((category) => `<option value="${escapeHTML(category.id)}">${escapeHTML(category.icon)} ${escapeHTML(category.name)}</option>`)
     .join("");
 
   elements.transactionCategory.innerHTML = categoryOptions;
@@ -300,9 +314,24 @@ function handleExport() {
   URL.revokeObjectURL(url);
 }
 
+function debounce(fn, delay = 250) {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+}
+
 async function handleImport(event) {
   const file = event.target.files?.[0];
   if (!file) {
+    return;
+  }
+
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+  if (file.size > MAX_FILE_SIZE) {
+    alert("El archivo excede el limite de 2MB permitido.");
+    event.target.value = "";
     return;
   }
 

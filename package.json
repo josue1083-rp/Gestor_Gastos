@@ -1,0 +1,13 @@
+{
+  "name": "gestor-gastos",
+  "version": "1.0.0",
+  "description": "Gestor de Gastos Personales - PWA offline",
+  "main": "js/app.js",
+  "type": "module",
+  "scripts": {
+    "build": "npx esbuild js/app.js --bundle --outfile=js/bundle.js --format=iife --target=es2020"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}

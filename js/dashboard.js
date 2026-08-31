@@ -17,7 +17,7 @@ export function calculateTotals(transactions, settings) {
 }
 
 export function formatMoney(value, currency) {
-  return new Intl.NumberFormat("es-VE", {
+  return new Intl.NumberFormat("es-DO", {
     style: "currency",
     currency,
     maximumFractionDigits: 2,
@@ -25,7 +25,7 @@ export function formatMoney(value, currency) {
 }
 
 export function formatDate(dateText) {
-  return new Intl.DateTimeFormat("es-VE", {
+  return new Intl.DateTimeFormat("es-DO", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -55,7 +55,7 @@ function getFinancialMonthRange(referenceDate, financialStartDay) {
 }
 
 function formatDateRange(start, end) {
-  const formatter = new Intl.DateTimeFormat("es-VE", {
+  const formatter = new Intl.DateTimeFormat("es-DO", {
     day: "2-digit",
     month: "short",
   });
