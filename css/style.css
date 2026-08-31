@@ -463,6 +463,12 @@ td small {
   gap: 0.55rem;
 }
 
+.reminder-form {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+  gap: 0.55rem;
+}
+
 .category-list {
   display: grid;
   gap: 0.55rem;

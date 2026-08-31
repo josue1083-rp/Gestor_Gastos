@@ -231,6 +231,19 @@
           </div>
 
           <div class="settings-block">
+            <h3>Recordatorios (Máx. 10)</h3>
+            <div class="reminder-form">
+              <input id="reminderTime" type="time" value="20:00" required />
+              <input id="reminderLabel" type="text" maxlength="40" placeholder="Etiqueta (ej. Registro nocturno)" />
+              <button class="button button--primary" id="saveReminderButton" type="button">Agregar</button>
+            </div>
+            <div class="category-list" id="remindersList"></div>
+            <div class="backup-actions" style="margin-top: 0.5rem;">
+              <button class="button button--secondary" id="testNotificationButton" type="button">🔔 Probar Notificación</button>
+            </div>
+          </div>
+
+          <div class="settings-block">
             <h3>Respaldo</h3>
             <div class="backup-actions">
               <button class="button button--secondary" id="exportButton" type="button">Exportar JSON</button>

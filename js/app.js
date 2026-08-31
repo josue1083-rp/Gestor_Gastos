@@ -1,8 +1,9 @@
-import { clearState, exportState, importState, loadState, saveState } from "./storage.js";
+import { clearState, createId, exportState, importState, loadState, saveState } from "./storage.js";
 import { deleteCategory, getCategory, upsertCategory } from "./categories.js";
 import { deleteTransaction, filterTransactions, upsertTransaction } from "./transactions.js";
 import { calculateTotals, formatDate, formatMoney } from "./dashboard.js";
 import { renderCharts } from "./charts.js";
+import { requestNotificationPermission, sendLocalNotification, startNotificationScheduler } from "./notifications.js";
 
 let state = loadState();
 
@@ -45,6 +46,11 @@ const elements = {
   saveCategoryButton: document.getElementById("saveCategoryButton"),
   categoriesList: document.getElementById("categoriesList"),
   importInput: document.getElementById("importInput"),
+  reminderTime: document.getElementById("reminderTime"),
+  reminderLabel: document.getElementById("reminderLabel"),
+  saveReminderButton: document.getElementById("saveReminderButton"),
+  remindersList: document.getElementById("remindersList"),
+  testNotificationButton: document.getElementById("testNotificationButton"),
 };
 
 initialize();
@@ -55,6 +61,7 @@ function initialize() {
   applyTheme();
   render();
   registerServiceWorker();
+  startNotificationScheduler(() => state.settings);
 }
 
 function bindEvents() {
@@ -76,6 +83,10 @@ function bindEvents() {
   elements.filtersForm.addEventListener("change", renderTransactions);
   elements.transactionType.addEventListener("change", populateTransactionCategories);
   elements.saveCategoryButton.addEventListener("click", handleCategorySave);
+  elements.saveReminderButton.addEventListener("click", handleReminderSave);
+  elements.testNotificationButton.addEventListener("click", handleTestNotification);
+  elements.remindersList.addEventListener("click", handleReminderAction);
+  elements.remindersList.addEventListener("change", handleReminderToggle);
   elements.importInput.addEventListener("change", handleImport);
   elements.transactionsTable.addEventListener("click", handleTransactionAction);
   elements.categoriesList.addEventListener("click", handleCategoryAction);
@@ -89,6 +100,7 @@ function render() {
   populateCategorySelects();
   renderTransactions();
   renderCategories();
+  renderReminders();
   renderSettings();
   renderCharts(state.transactions, state.categories, state.settings);
 }
@@ -205,6 +217,7 @@ function openTransactionModal(transaction = null) {
 function openSettingsModal() {
   renderSettings();
   renderCategories();
+  renderReminders();
   elements.settingsModal.showModal();
 }
 
@@ -234,6 +247,7 @@ function handleTransactionSubmit(event) {
 function handleSettingsSubmit(event) {
   event.preventDefault();
   state.settings = {
+    ...state.settings,
     theme: elements.themeSelect.value,
     currency: elements.currencySelect.value,
     financialStartDay: Number(elements.financialStartDay.value),
@@ -301,6 +315,107 @@ function handleCategoryAction(event) {
     } catch (error) {
       alert(error.message);
     }
+  }
+}
+
+function renderReminders() {
+  elements.remindersList.replaceChildren();
+  const reminders = state.settings.reminders || [];
+  if (reminders.length === 0) {
+    const emptyMsg = document.createElement("p");
+    emptyMsg.className = "hint";
+    emptyMsg.textContent = "No hay recordatorios configurados.";
+    elements.remindersList.append(emptyMsg);
+    return;
+  }
+
+  reminders.forEach((reminder) => {
+    const item = document.createElement("div");
+    item.className = "category-item";
+    item.dataset.id = reminder.id;
+    item.innerHTML = `
+      <div class="category-item__meta">
+        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+          <input type="checkbox" data-action="toggle-reminder" ${reminder.enabled ? "checked" : ""} />
+          <strong>⏰ ${escapeHTML(reminder.time)}</strong>
+          <span>- ${escapeHTML(reminder.label || "Recordatorio")}</span>
+        </label>
+      </div>
+      <div class="table-actions">
+        <button class="small-button small-button--danger" type="button" data-action="delete-reminder">Eliminar</button>
+      </div>
+    `;
+    elements.remindersList.append(item);
+  });
+}
+
+async function handleReminderSave() {
+  const currentReminders = state.settings.reminders || [];
+  if (currentReminders.length >= 10) {
+    alert("Has alcanzado el limite maximo de 10 recordatorios.");
+    return;
+  }
+
+  const time = elements.reminderTime.value;
+  const label = elements.reminderLabel.value.trim() || "Recordatorio de gastos";
+
+  if (!/^\d{2}:\d{2}$/.test(time)) {
+    alert("Selecciona una hora valida.");
+    return;
+  }
+
+  const granted = await requestNotificationPermission();
+  if (!granted) {
+    return;
+  }
+
+  const newReminder = {
+    id: createId(),
+    time,
+    label,
+    enabled: true,
+  };
+
+  state.settings.reminders = [...currentReminders, newReminder];
+  elements.reminderLabel.value = "";
+  render();
+}
+
+function handleReminderToggle(event) {
+  const target = event.target;
+  if (target.dataset.action !== "toggle-reminder") {
+    return;
+  }
+  const reminderId = target.closest(".category-item").dataset.id;
+  state.settings.reminders = (state.settings.reminders || []).map((rem) =>
+    rem.id === reminderId ? { ...rem, enabled: target.checked } : rem
+  );
+  render();
+}
+
+function handleReminderAction(event) {
+  const button = event.target.closest("button");
+  if (!button) {
+    return;
+  }
+
+  const reminderId = button.closest(".category-item").dataset.id;
+  if (button.dataset.action === "delete-reminder") {
+    state.settings.reminders = (state.settings.reminders || []).filter((rem) => rem.id !== reminderId);
+    render();
+  }
+}
+
+async function handleTestNotification() {
+  const granted = await requestNotificationPermission();
+  if (!granted) {
+    return;
+  }
+  const success = await sendLocalNotification("Notificación de Prueba 🔔", {
+    body: "¡Las notificaciones del Gestor de Gastos están funcionando correctamente!",
+  });
+  if (!success) {
+    alert("No se pudo mostrar la notificacion. Verifica los permisos de tu navegador.");
   }
 }
 

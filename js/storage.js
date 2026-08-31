@@ -15,6 +15,14 @@ const defaultSettings = {
   theme: "dark",
   currency: "DOP",
   financialStartDay: 1,
+  reminders: [
+    {
+      id: "default-reminder",
+      time: "20:00",
+      label: "Recordatorio diario de gastos",
+      enabled: true,
+    },
+  ],
 };
 
 const supportedCurrencies = new Set(["DOP", "USD"]);
@@ -85,12 +93,35 @@ function normalizeState(state) {
 
 function normalizeSettings(settings) {
   if (!settings || typeof settings !== "object") {
-    return {};
+    return { ...defaultSettings };
   }
+
+  const rawReminders = Array.isArray(settings.reminders) ? settings.reminders : defaultSettings.reminders;
+  const reminders = rawReminders
+    .map(normalizeReminder)
+    .filter(Boolean)
+    .slice(0, 10);
 
   return {
     ...settings,
     currency: supportedCurrencies.has(settings.currency) ? settings.currency : defaultSettings.currency,
+    reminders: reminders.length > 0 ? reminders : defaultSettings.reminders,
+  };
+}
+
+function normalizeReminder(reminder) {
+  if (!reminder || typeof reminder !== "object") {
+    return null;
+  }
+  const time = String(reminder.time || "20:00").trim();
+  if (!/^\d{2}:\d{2}$/.test(time)) {
+    return null;
+  }
+  return {
+    id: String(reminder.id || createId()),
+    time,
+    label: String(reminder.label || "Recordatorio de gastos").trim().slice(0, 40),
+    enabled: Boolean(reminder.enabled),
   };
 }
 
