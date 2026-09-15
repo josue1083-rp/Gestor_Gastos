@@ -790,7 +790,7 @@ tr:last-child td {
 /* Settings View & Grids */
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -801,6 +801,8 @@ tr:last-child td {
   border-radius: var(--card-radius);
   display: grid;
   gap: 1rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .settings-block h3 {
@@ -808,12 +810,25 @@ tr:last-child td {
   font-size: 1.1rem;
 }
 
-.category-form,
-.reminder-form,
+.category-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 3.5rem 3.5rem auto;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.reminder-form {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
 .wallet-form {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 0.55rem;
+  min-width: 0;
 }
 
 .category-list,
@@ -823,6 +838,7 @@ tr:last-child td {
   gap: 0.55rem;
   max-height: 240px;
   overflow-y: auto;
+  min-width: 0;
 }
 
 .category-item,
@@ -831,10 +847,12 @@ tr:last-child td {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.6rem;
   padding: 0.75rem 0.9rem;
   background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: var(--element-radius);
+  min-width: 0;
 }
 
 .color-dot {

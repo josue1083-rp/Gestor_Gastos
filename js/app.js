@@ -621,7 +621,14 @@ function handleTransactionTypeChange() {
   const isTransfer = elements.transactionType.value === "transfer";
   elements.targetWalletField.style.display = isTransfer ? "flex" : "none";
   elements.categoryFieldLabel.style.display = isTransfer ? "none" : "flex";
-  elements.walletFieldLabel.querySelector("span, text")?.remove();
+
+  const walletLabel = document.getElementById("walletFieldLabel");
+  if (walletLabel) {
+    const textNode = walletLabel.childNodes[0];
+    if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+      textNode.textContent = isTransfer ? "Cartera origen " : "Cartera ";
+    }
+  }
 }
 
 function handleTransactionSubmit(event) {
