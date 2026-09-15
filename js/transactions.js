@@ -2,15 +2,25 @@ import { createId } from "./storage.js";
 
 export function upsertTransaction(transactions, payload) {
   const now = new Date().toISOString();
+  const type = payload.type === "income" ? "income" : payload.type === "transfer" ? "transfer" : "expense";
+  const isRecurring = Boolean(payload.isRecurring);
+  const recurringFrequency = payload.recurringFrequency || (isRecurring ? "monthly" : "none");
+
   const transaction = {
     id: payload.id || createId(),
-    type: payload.type,
+    type,
     amount: Number(payload.amount),
-    categoryId: payload.categoryId,
+    categoryId: type === "transfer" ? "other" : (payload.categoryId || "other"),
+    walletId: payload.walletId || payload.sourceWalletId || "wallet-cash",
+    sourceWalletId: payload.sourceWalletId || (type === "transfer" ? payload.walletId : null),
+    targetWalletId: payload.targetWalletId || null,
+    transferType: payload.transferType || (type === "transfer" ? "transfer" : "none"),
+    isRecurring,
+    recurringFrequency,
     description: payload.description.trim(),
     date: payload.date,
-    paymentMethod: payload.paymentMethod.trim(),
-    notes: payload.notes.trim(),
+    paymentMethod: (payload.paymentMethod || "").trim(),
+    notes: (payload.notes || "").trim(),
     createdAt: payload.createdAt || now,
     updatedAt: now,
   };
@@ -30,18 +40,37 @@ export function deleteTransaction(transactions, transactionId) {
 }
 
 export function filterTransactions(transactions, filters) {
-  const searchTerm = filters.search.trim().toLowerCase();
+  const searchTerm = (filters.search || "").trim().toLowerCase();
 
   return transactions
-    .filter((transaction) => filters.type === "all" || transaction.type === filters.type)
-    .filter((transaction) => filters.categoryId === "all" || transaction.categoryId === filters.categoryId)
+    .filter((transaction) => {
+      if (!filters.type || filters.type === "all") return true;
+      return transaction.type === filters.type;
+    })
+    .filter((transaction) => {
+      if (!filters.categoryId || filters.categoryId === "all") return true;
+      return transaction.categoryId === filters.categoryId;
+    })
+    .filter((transaction) => {
+      if (!filters.walletId || filters.walletId === "all") return true;
+      return (
+        transaction.walletId === filters.walletId ||
+        transaction.sourceWalletId === filters.walletId ||
+        transaction.targetWalletId === filters.walletId
+      );
+    })
     .filter((transaction) => !filters.month || transaction.date.startsWith(filters.month))
     .filter((transaction) => {
       if (!searchTerm) {
         return true;
       }
 
-      return [transaction.description, transaction.notes, transaction.paymentMethod]
+      return [
+        transaction.description,
+        transaction.notes,
+        transaction.paymentMethod,
+      ]
+        .filter(Boolean)
         .join(" ")
         .toLowerCase()
         .includes(searchTerm);
@@ -50,15 +79,15 @@ export function filterTransactions(transactions, filters) {
 }
 
 function validateTransaction(transaction) {
-  if (!["income", "expense"].includes(transaction.type)) {
-    throw new Error("Selecciona un tipo valido.");
+  if (!["income", "expense", "transfer"].includes(transaction.type)) {
+    throw new Error("Selecciona un tipo de movimiento valido.");
   }
 
   if (!Number.isFinite(transaction.amount) || transaction.amount <= 0) {
     throw new Error("El monto debe ser mayor que cero.");
   }
 
-  if (!transaction.categoryId) {
+  if (transaction.type !== "transfer" && !transaction.categoryId) {
     throw new Error("Selecciona una categoria.");
   }
 
@@ -68,6 +97,15 @@ function validateTransaction(transaction) {
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(transaction.date)) {
     throw new Error("Selecciona una fecha valida.");
+  }
+
+  if (transaction.type === "transfer") {
+    if (!transaction.sourceWalletId || !transaction.targetWalletId) {
+      throw new Error("Debes indicar la cartera de origen y de destino.");
+    }
+    if (transaction.sourceWalletId === transaction.targetWalletId) {
+      throw new Error("La cartera de origen y de destino no pueden ser la misma.");
+    }
   }
 }
 

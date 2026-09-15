@@ -1,142 +1,438 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#2563eb" />
+    <meta name="theme-color" content="#FAF6F0" />
     <title>Gestor de Gastos Personales</title>
     <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
+    <!-- Header -->
     <header class="app-header">
-      <div class="brand">
-        <span class="brand__icon" aria-hidden="true">💰</span>
-        <div>
-          <h1>Gestor de Gastos</h1>
-          <p>Finanzas personales offline</p>
+      <div class="header-left">
+        <button class="icon-button" id="menuButton" type="button" aria-label="Abrir menú de navegación">
+          ≡
+        </button>
+        <div class="brand">
+          <span class="brand__icon" aria-hidden="true">📖</span>
+          <div>
+            <h1>Gestor de Gastos</h1>
+            <p>Finanzas personales offline</p>
+          </div>
         </div>
       </div>
-      <div class="header-balance">
-        <span>Saldo actual</span>
-        <strong id="headerBalance">$0.00</strong>
+
+      <div class="header-right">
+        <div class="header-balance">
+          <span>Saldo actual</span>
+          <strong id="headerBalance" class="amount-serif">$0.00</strong>
+        </div>
+        <button class="icon-button" id="themeToggleButton" type="button" aria-label="Cambiar tema">
+          🌙
+        </button>
+        <button class="icon-button" id="settingsNavButton" type="button" aria-label="Abrir configuración">
+          ⚙️
+        </button>
       </div>
-      <button class="icon-button" id="settingsButton" type="button" aria-label="Abrir configuracion">
-        ⚙️
-      </button>
     </header>
 
-    <main class="app-shell">
-      <section class="summary-grid" aria-label="Resumen financiero">
-        <article class="summary-card summary-card--primary">
-          <span>Saldo total</span>
-          <strong id="totalBalance">$0.00</strong>
-          <small>Ingresos menos gastos</small>
-        </article>
-        <article class="summary-card">
-          <span>Ingresos</span>
-          <strong id="totalIncome">$0.00</strong>
-          <small>Historico registrado</small>
-        </article>
-        <article class="summary-card">
-          <span>Gastos</span>
-          <strong id="totalExpenses">$0.00</strong>
-          <small>Historico registrado</small>
-        </article>
-        <article class="summary-card">
-          <span>Balance del mes</span>
-          <strong id="monthlyBalance">$0.00</strong>
-          <small id="monthRangeLabel">Mes actual</small>
-        </article>
-      </section>
+    <!-- Drawer Navigation (Menú Hamburguesa) -->
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <nav class="nav-drawer" id="navDrawer" aria-label="Navegación principal">
+      <div class="drawer-header">
+        <h2>Navegación</h2>
+        <button class="icon-button" id="closeDrawerButton" type="button" aria-label="Cerrar menú">
+          ✕
+        </button>
+      </div>
+      <ul class="nav-links">
+        <li>
+          <button class="nav-link active" data-view="viewPrincipal" type="button">
+            <span>🏠</span> Principal
+          </button>
+        </li>
+        <li>
+          <button class="nav-link" data-view="viewEstadisticas" type="button">
+            <span>📊</span> Estadísticas
+          </button>
+        </li>
+        <li>
+          <button class="nav-link" data-view="viewHistorial" type="button">
+            <span>📜</span> Historial
+          </button>
+        </li>
+        <li>
+          <button class="nav-link" data-view="viewConfiguracion" type="button">
+            <span>⚙️</span> Configuración
+          </button>
+        </li>
+      </ul>
+    </nav>
 
-      <section class="workspace">
-        <section class="panel movements-panel">
-          <div class="panel__header">
+    <!-- Shell Principal con las 4 Vistas SPA -->
+    <main class="app-shell">
+      <!-- 1. VISTA PRINCIPAL -->
+      <section class="view-section active" id="viewPrincipal">
+        <!-- Resumen Financiero -->
+        <div class="summary-grid" aria-label="Resumen financiero">
+          <article class="summary-card summary-card--total">
+            <span>Saldo total</span>
+            <strong id="totalBalance" class="amount-serif">$0.00</strong>
+            <small>Consolidado en todas tus carteras</small>
+          </article>
+          <article class="summary-card">
+            <span>Balance del mes</span>
+            <strong id="monthlyBalance" class="amount-serif">$0.00</strong>
+            <small id="monthRangeLabel">Mes financiero actual</small>
+          </article>
+          <article class="summary-card">
+            <span>Ingresos</span>
+            <strong id="totalIncome" class="amount-serif amount-income">$0.00</strong>
+            <small>Histórico registrado</small>
+          </article>
+          <article class="summary-card">
+            <span>Gastos</span>
+            <strong id="totalExpenses" class="amount-serif amount-expense">$0.00</strong>
+            <small>Histórico registrado</small>
+          </article>
+        </div>
+
+        <!-- 5. Carteras (Múltiples / Dinámicas) -->
+        <section class="wallets-section">
+          <div class="section-header">
             <div>
-              <h2>Movimientos</h2>
-              <p>Busca, filtra y ordena tus ingresos y gastos.</p>
+              <h2>Carteras de Saldo</h2>
+              <p>Gestiona tus canales de efectivo, tarjetas y bancos</p>
             </div>
+            <button class="button button--secondary" id="quickTransferButton" type="button">
+              ⇄ Transferencia rápida
+            </button>
           </div>
 
-          <form class="filters" id="filtersForm">
+          <!-- 5.1 & 5.2 Lista de Carteras dinámicas -->
+          <div class="wallets-grid" id="walletsListContainer"></div>
+
+          <!-- 5.3 Subtotales y Desglose -->
+          <div class="wallet-subdivisions">
+            <div class="subdivision-card">
+              <span>💵 Total en Efectivo</span>
+              <strong id="totalCashBalance" class="amount-serif">$0.00</strong>
+            </div>
+            <div class="subdivision-card">
+              <span>💳 Total en Tarjetas / Bancos</span>
+              <strong id="totalCardBalance" class="amount-serif">$0.00</strong>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. Metas de Ahorro & 7. Fondo de Emergencia -->
+        <div class="goals-fund-grid">
+          <!-- Metas de Ahorro -->
+          <section class="panel-block">
+            <div class="section-header">
+              <div>
+                <h3>🎯 Metas de Ahorro</h3>
+                <p>Monitorea tus alcancías virtuales</p>
+              </div>
+              <button class="button button--secondary" id="newGoalButton" type="button">
+                + Nueva meta
+              </button>
+            </div>
+            <div class="goals-list" id="savingsGoalsContainer"></div>
+          </section>
+
+          <!-- Fondo de Emergencia -->
+          <section class="panel-block">
+            <div class="section-header">
+              <div>
+                <h3>🛡️ Fondo de Emergencia</h3>
+                <p>Tu red de seguridad ante imprevistos</p>
+              </div>
+              <button class="button button--secondary" id="manageFundButton" type="button">
+                Ajustar fondo
+              </button>
+            </div>
+            <div class="goal-card" style="margin-top: 1rem;">
+              <div class="goal-card__header">
+                <span id="fundMonthsLabel">Meta: 3 meses de gastos</span>
+                <strong id="fundCurrentAmount" class="amount-serif">$0.00</strong>
+              </div>
+              <div class="progress-bar-wrap">
+                <div class="progress-bar" id="fundProgressBar" style="width: 0%;"></div>
+              </div>
+              <div class="goal-card__footer">
+                <span id="fundTargetLabel">Objetivo estimado: $0.00</span>
+                <span id="fundPercentageLabel">0%</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- 2. VISTA ESTADÍSTICAS -->
+      <section class="view-section" id="viewEstadisticas">
+        <div class="section-header">
+          <div>
+            <h2>Estadísticas y Análisis de Gastos</h2>
+            <p>Conoce tus patrones financieros y medias periódicas</p>
+          </div>
+        </div>
+
+        <!-- Medias de gastos por periodo -->
+        <div class="averages-grid">
+          <div class="average-card">
+            <span>Media semanal</span>
+            <strong id="avgWeekly" class="amount-serif">$0.00</strong>
+          </div>
+          <div class="average-card">
+            <span>Media mensual</span>
+            <strong id="avgMonthly" class="amount-serif">$0.00</strong>
+          </div>
+          <div class="average-card">
+            <span>Media trimestral</span>
+            <strong id="avgQuarterly" class="amount-serif">$0.00</strong>
+          </div>
+          <div class="average-card">
+            <span>Media semestral</span>
+            <strong id="avgSemiannual" class="amount-serif">$0.00</strong>
+          </div>
+          <div class="average-card">
+            <span>Media anual</span>
+            <strong id="avgAnnual" class="amount-serif">$0.00</strong>
+          </div>
+          <div class="average-card">
+            <span>Tasa de ahorro</span>
+            <strong id="savingsRate" class="amount-serif amount-income" style="color: var(--income);">0%</strong>
+          </div>
+        </div>
+
+        <!-- Gráficos Canvas -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3>Gastos por categoría</h3>
+            <canvas id="categoryChart" width="440" height="270"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Ingresos vs gastos</h3>
+            <canvas id="incomeExpenseChart" width="440" height="270"></canvas>
+          </div>
+          <div class="chart-card" style="grid-column: 1 / -1;">
+            <h3>Evolución del saldo</h3>
+            <canvas id="balanceChart" width="900" height="280"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. VISTA HISTORIAL -->
+      <section class="view-section" id="viewHistorial">
+        <div class="section-header">
+          <div>
+            <h2>Historial de Movimientos</h2>
+            <p>Busca, filtra y audita cada transacción registrada</p>
+          </div>
+          <span id="filterCountSummary" class="hint">0 movimientos encontrados</span>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-wrap">
+          <form class="filters-form" id="filtersForm">
             <label>
               Buscar
-              <input id="searchInput" type="search" placeholder="Descripcion, nota o metodo" />
+              <input id="searchInput" type="search" placeholder="Descripción o notas" />
             </label>
             <label>
               Mes
               <input id="monthFilter" type="month" />
             </label>
             <label>
-              Categoria
+              Categoría
               <select id="categoryFilter"></select>
             </label>
             <label>
               Tipo
               <select id="typeFilter">
-                <option value="all">Todos</option>
-                <option value="income">Ingresos</option>
-                <option value="expense">Gastos</option>
+                <option value="all">Todos los tipos</option>
+                <option value="income">Solo ingresos</option>
+                <option value="expense">Solo gastos</option>
+                <option value="transfer">Solo transferencias</option>
               </select>
             </label>
             <label>
-              Ordenar
+              Cartera
+              <select id="walletFilter">
+                <option value="all">Todas las carteras</option>
+              </select>
+            </label>
+            <label>
+              Ordenar por
               <select id="sortSelect">
-                <option value="date-desc">Fecha reciente</option>
-                <option value="date-asc">Fecha antigua</option>
+                <option value="date-desc">Fecha más reciente</option>
+                <option value="date-asc">Fecha más antigua</option>
                 <option value="amount-desc">Monto mayor</option>
                 <option value="amount-asc">Monto menor</option>
               </select>
             </label>
           </form>
+        </div>
 
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Detalle</th>
-                  <th>Categoria</th>
-                  <th>Monto</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="transactionsTable"></tbody>
-            </table>
+        <!-- Tabla de Movimientos -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Detalle</th>
+                <th>Cartera</th>
+                <th>Categoría</th>
+                <th>Monto</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="transactionsTable"></tbody>
+          </table>
+        </div>
+        <p class="empty-state" id="emptyTransactions" hidden>
+          No hay movimientos con los filtros seleccionados.
+        </p>
+      </section>
+
+      <!-- 4. VISTA CONFIGURACIÓN -->
+      <section class="view-section" id="viewConfiguracion">
+        <div class="section-header">
+          <div>
+            <h2>Configuración del Sistema</h2>
+            <p>Ajusta preferencias, carteras, metas y respaldos</p>
           </div>
-          <p class="empty-state" id="emptyTransactions" hidden>
-            No hay movimientos con esos filtros. El lienzo financiero espera su primera pincelada.
-          </p>
-        </section>
+        </div>
 
-        <aside class="panel charts-panel">
-          <div class="panel__header">
-            <div>
-              <h2>Estadisticas</h2>
-              <p>Vista rapida de tus patrones.</p>
+        <div class="settings-grid">
+          <!-- 4.1 Preferencias -->
+          <div class="settings-block">
+            <h3>Preferencias generales</h3>
+            <form id="preferencesForm">
+              <label>
+                Tema visual
+                <select id="themeSelect">
+                  <option value="light">Claro (Papel & Crema)</option>
+                  <option value="dark">Oscuro (Carbón Cálido)</option>
+                </select>
+              </label>
+              <label style="margin-top: 0.75rem;">
+                Moneda principal
+                <select id="currencySelect">
+                  <option value="DOP">DOP - Peso dominicano</option>
+                  <option value="USD">USD - Dólar estadounidense</option>
+                  <option value="EUR">EUR - Euro</option>
+                </select>
+              </label>
+              <label style="margin-top: 0.75rem;">
+                Inicio de mes financiero
+                <select id="financialStartDay"></select>
+              </label>
+              <div style="margin-top: 1rem;">
+                <button class="button button--primary" type="submit">Guardar preferencias</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- 4.4 Gestión de Carteras (Capacitores) -->
+          <div class="settings-block">
+            <h3>Gestión de Carteras</h3>
+            <form class="wallet-form" id="walletManageForm">
+              <input id="manageWalletId" type="hidden" />
+              <input id="manageWalletName" type="text" placeholder="Nombre (ej. BHD Débito)" required />
+              <select id="manageWalletType" required>
+                <option value="tarjeta">Tarjeta / Banco</option>
+                <option value="efectivo">Efectivo</option>
+              </select>
+              <input id="manageWalletBalance" type="number" step="0.01" placeholder="Saldo inicial" />
+              <button class="button button--primary" type="submit">Guardar</button>
+            </form>
+            <div class="wallets-list" id="manageWalletsList"></div>
+          </div>
+
+          <!-- 4.2 Categorías -->
+          <div class="settings-block">
+            <h3>Categorías de gasto/ingreso</h3>
+            <div class="category-form">
+              <input id="categoryId" type="hidden" />
+              <input id="categoryName" type="text" maxlength="32" placeholder="Nombre categoría" />
+              <input id="categoryIcon" type="text" maxlength="4" placeholder="Icono" />
+              <input id="categoryColor" type="color" value="#C6633C" />
+              <button class="button button--primary" id="saveCategoryButton" type="button">Guardar</button>
+            </div>
+            <div class="category-list" id="categoriesList"></div>
+          </div>
+
+          <!-- 4.3 Recordatorios PWA -->
+          <div class="settings-block">
+            <h3>Recordatorios (Máx. 10)</h3>
+            <div class="reminder-form">
+              <input id="reminderTime" type="time" value="20:00" required />
+              <input id="reminderLabel" type="text" maxlength="40" placeholder="Etiqueta recordatorio" />
+              <button class="button button--primary" id="saveReminderButton" type="button">Agregar</button>
+            </div>
+            <div class="reminders-list" id="remindersList"></div>
+            <div style="margin-top: 0.5rem;">
+              <button class="button button--secondary" id="testNotificationButton" type="button">
+                🔔 Probar notificación en vivo
+              </button>
             </div>
           </div>
-          <div class="chart-card">
-            <h3>Gastos por categoria</h3>
-            <canvas id="categoryChart" width="420" height="260"></canvas>
+
+          <!-- 4.6 Gestión de Fondo de Emergencia -->
+          <div class="settings-block">
+            <h3>Fondo de Emergencia</h3>
+            <form id="emergencyFundSettingsForm">
+              <label>
+                Meses de gastos a cubrir
+                <input id="targetMonthsInput" type="number" min="1" max="24" value="3" required />
+              </label>
+              <label style="margin-top: 0.75rem;">
+                Objetivo manual opcional (dejar 0 para auto-calcular)
+                <input id="customTargetFundInput" type="number" min="0" step="100" value="0" />
+              </label>
+              <div style="margin-top: 1rem;">
+                <button class="button button--primary" type="submit">Actualizar objetivo de fondo</button>
+              </div>
+            </form>
           </div>
-          <div class="chart-card">
-            <h3>Ingresos vs gastos</h3>
-            <canvas id="incomeExpenseChart" width="420" height="260"></canvas>
+
+          <!-- 4.7 Respaldo y Datos -->
+          <div class="settings-block">
+            <h3>Respaldo y almacenamiento local</h3>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button class="button button--secondary" id="exportButton" type="button">
+                Exportar JSON
+              </button>
+              <label class="button button--secondary" for="importInput">
+                Importar JSON
+              </label>
+              <input id="importInput" type="file" accept="application/json,.json" hidden />
+              <button class="button button--danger" id="clearDataButton" type="button">
+                Eliminar todos los datos
+              </button>
+            </div>
+            <p class="hint">Tus datos se guardan estrictamente en tu navegador de forma offline.</p>
           </div>
-          <div class="chart-card">
-            <h3>Evolucion del saldo</h3>
-            <canvas id="balanceChart" width="420" height="260"></canvas>
-          </div>
-        </aside>
+        </div>
       </section>
     </main>
 
-    <button class="floating-button" id="addTransactionButton" type="button" aria-label="Agregar movimiento">
+    <!-- Botón Flotante para Nuevo Movimiento (+) -->
+    <button class="floating-button" id="addTransactionButton" type="button" aria-label="Nuevo movimiento">
       +
     </button>
 
+    <!-- 5. Modal Gestor de Movimiento -->
     <dialog class="modal" id="transactionModal">
       <form class="modal__content" id="transactionForm">
         <div class="modal__header">
@@ -146,130 +442,204 @@
           </button>
         </div>
         <input id="transactionId" type="hidden" />
+
         <div class="form-grid">
+          <!-- 1. Tipo -->
           <label>
-            Tipo
+            Tipo de movimiento
             <select id="transactionType" required>
-              <option value="income">Ingreso</option>
               <option value="expense">Gasto</option>
+              <option value="income">Ingreso</option>
+              <option value="transfer">Transferencia entre carteras</option>
             </select>
           </label>
+
+          <!-- 2. Monto -->
           <label>
             Monto
             <input id="transactionAmount" type="number" min="0.01" step="0.01" required />
           </label>
-          <label>
-            Categoria
-            <select id="transactionCategory" required></select>
+
+          <!-- 3. Cartera (o Cartera Origen) -->
+          <label id="walletFieldLabel">
+            Cartera
+            <select id="transactionWallet" required></select>
           </label>
+
+          <!-- Cartera Destino (solo para transferencias) -->
+          <label id="targetWalletField" style="display: none;">
+            Cartera destino
+            <select id="transactionTargetWallet"></select>
+          </label>
+
+          <!-- Categoría (se oculta si es transferencia) -->
+          <label id="categoryFieldLabel">
+            Categoría
+            <select id="transactionCategory"></select>
+          </label>
+
+          <!-- 5. Fecha -->
           <label>
             Fecha
             <input id="transactionDate" type="date" required />
           </label>
+
+          <!-- 4. Pago Recurrente -->
+          <label class="form-grid__wide" style="flex-direction: row; align-items: center; gap: 0.65rem;">
+            <input id="transactionRecurring" type="checkbox" />
+            <span>Pago / compromiso recurrente</span>
+            <select id="transactionFrequency" style="display: none; width: auto; margin-left: auto;">
+              <option value="weekly">Semanal</option>
+              <option value="biweekly">Quincenal</option>
+              <option value="monthly">Mensual</option>
+            </select>
+          </label>
+
+          <!-- 6. Descripción -->
           <label class="form-grid__wide">
-            Descripcion
+            Descripción
             <input id="transactionDescription" type="text" maxlength="80" required />
           </label>
-          <label>
-            Metodo de pago
-            <input id="transactionPayment" type="text" maxlength="40" placeholder="Opcional" />
-          </label>
+
+          <!-- 7. Notas -->
           <label class="form-grid__wide">
-            Notas
-            <textarea id="transactionNotes" rows="3" maxlength="240" placeholder="Opcional"></textarea>
+            Notas adicionales
+            <textarea id="transactionNotes" rows="2" maxlength="240" placeholder="Opcional"></textarea>
           </label>
         </div>
+
         <div class="modal__actions">
-          <button class="button button--ghost" type="button" data-close-modal="transactionModal">Cancelar</button>
-          <button class="button button--primary" type="submit">Guardar</button>
+          <button class="button button--ghost" type="button" data-close-modal="transactionModal">
+            Cancelar
+          </button>
+          <button class="button button--primary" type="submit">Guardar movimiento</button>
         </div>
       </form>
     </dialog>
 
-    <dialog class="modal" id="settingsModal">
-      <form class="modal__content modal__content--wide" id="settingsForm">
+    <!-- Modal Transferencia Rápida (Retiro / Depósito) -->
+    <dialog class="modal" id="transferModal">
+      <form class="modal__content" id="transferForm">
         <div class="modal__header">
-          <h2>Configuracion</h2>
-          <button class="icon-button" type="button" data-close-modal="settingsModal" aria-label="Cerrar">
+          <h2>Transferencia rápida entre carteras</h2>
+          <button class="icon-button" type="button" data-close-modal="transferModal" aria-label="Cerrar">
             ✕
           </button>
         </div>
-
-        <section class="settings-grid">
-          <div class="settings-block">
-            <h3>Preferencias</h3>
-            <label>
-              Tema
-              <select id="themeSelect">
-                <option value="light">Claro</option>
-                <option value="dark">Oscuro</option>
-              </select>
-            </label>
-            <label>
-              Moneda
-              <select id="currencySelect">
-                <option value="DOP">DOP - Peso dominicano</option>
-                <option value="USD">USD - Dolar</option>
-              </select>
-            </label>
-            <label>
-              Inicio del mes financiero
-              <select id="financialStartDay"></select>
-            </label>
-          </div>
-
-          <div class="settings-block">
-            <h3>Categorias</h3>
-            <div class="category-form">
-              <input id="categoryId" type="hidden" />
-              <input id="categoryName" type="text" maxlength="32" placeholder="Nombre" />
-              <input id="categoryIcon" type="text" maxlength="5" placeholder="Icono" />
-              <input id="categoryColor" type="color" value="#2563eb" aria-label="Color" />
-              <button class="button button--primary" id="saveCategoryButton" type="button">Guardar</button>
-            </div>
-            <div class="category-list" id="categoriesList"></div>
-          </div>
-
-          <div class="settings-block">
-            <h3>Recordatorios (Máx. 10)</h3>
-            <div class="reminder-form">
-              <input id="reminderTime" type="time" value="20:00" required />
-              <input id="reminderLabel" type="text" maxlength="40" placeholder="Etiqueta (ej. Registro nocturno)" />
-              <button class="button button--primary" id="saveReminderButton" type="button">Agregar</button>
-            </div>
-            <div class="category-list" id="remindersList"></div>
-            <div class="backup-actions" style="margin-top: 0.5rem;">
-              <button class="button button--secondary" id="testNotificationButton" type="button">🔔 Probar Notificación</button>
-            </div>
-          </div>
-
-          <div class="settings-block">
-            <h3>Respaldo</h3>
-            <div class="backup-actions">
-              <button class="button button--secondary" id="exportButton" type="button">Exportar JSON</button>
-              <label class="button button--secondary" for="importInput">Importar JSON</label>
-              <input id="importInput" type="file" accept="application/json,.json" hidden />
-              <button class="button button--danger" id="clearDataButton" type="button">Eliminar todo</button>
-            </div>
-            <p class="hint">Tus datos viven solamente en este navegador mediante LocalStorage.</p>
-          </div>
-        </section>
-
+        <div class="form-grid">
+          <label>
+            Cartera origen
+            <select id="quickSourceWallet" required></select>
+          </label>
+          <label>
+            Cartera destino
+            <select id="quickTargetWallet" required></select>
+          </label>
+          <label>
+            Monto a traspasar
+            <input id="quickTransferAmount" type="number" min="0.01" step="0.01" required />
+          </label>
+          <label>
+            Fecha
+            <input id="quickTransferDate" type="date" required />
+          </label>
+          <label class="form-grid__wide">
+            Descripción (ej. Retiro de cajero / Depósito)
+            <input id="quickTransferDesc" type="text" value="Transferencia interna" required />
+          </label>
+        </div>
         <div class="modal__actions">
-          <button class="button button--primary" type="submit">Aplicar cambios</button>
+          <button class="button button--ghost" type="button" data-close-modal="transferModal">
+            Cancelar
+          </button>
+          <button class="button button--primary" type="submit">Realizar traspaso</button>
         </div>
       </form>
     </dialog>
 
+    <!-- Modal Nueva Meta de Ahorro -->
+    <dialog class="modal" id="goalModal">
+      <form class="modal__content" id="goalForm">
+        <div class="modal__header">
+          <h2 id="goalModalTitle">Nueva meta de ahorro</h2>
+          <button class="icon-button" type="button" data-close-modal="goalModal" aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+        <input id="goalId" type="hidden" />
+        <div class="form-grid">
+          <label class="form-grid__wide">
+            Nombre de la meta
+            <input id="goalName" type="text" placeholder="Ej. Fondo de vacaciones" required />
+          </label>
+          <label>
+            Monto objetivo
+            <input id="goalTargetAmount" type="number" min="1" step="1" required />
+          </label>
+          <label>
+            Monto acumulado inicial
+            <input id="goalCurrentAmount" type="number" min="0" step="1" value="0" />
+          </label>
+          <label>
+            Fecha estimada
+            <input id="goalDeadline" type="date" />
+          </label>
+          <label>
+            Icono
+            <input id="goalIcon" type="text" maxlength="4" value="🎯" />
+          </label>
+        </div>
+        <div class="modal__actions">
+          <button class="button button--ghost" type="button" data-close-modal="goalModal">
+            Cancelar
+          </button>
+          <button class="button button--primary" type="submit">Guardar meta</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Modal Aportar al Fondo de Emergencia -->
+    <dialog class="modal" id="fundContributionModal">
+      <form class="modal__content" id="fundContributionForm">
+        <div class="modal__header">
+          <h2>Aportar al Fondo de Emergencia</h2>
+          <button class="icon-button" type="button" data-close-modal="fundContributionModal" aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+        <div class="form-grid">
+          <label class="form-grid__wide">
+            Operación
+            <select id="fundOpType" required>
+              <option value="deposit">Aportar saldo al fondo (+)</option>
+              <option value="withdraw">Retirar saldo del fondo (-)</option>
+            </select>
+          </label>
+          <label class="form-grid__wide">
+            Monto
+            <input id="fundOpAmount" type="number" min="1" step="1" required />
+          </label>
+        </div>
+        <div class="modal__actions">
+          <button class="button button--ghost" type="button" data-close-modal="fundContributionModal">
+            Cancelar
+          </button>
+          <button class="button button--primary" type="submit">Confirmar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Template de Fila de Transacción -->
     <template id="transactionRowTemplate">
       <tr>
         <td data-cell="date"></td>
         <td>
           <strong data-cell="description"></strong>
-          <small data-cell="notes"></small>
+          <small data-cell="notes" style="display: block; color: var(--text-muted); font-size: 0.8rem;"></small>
         </td>
+        <td data-cell="wallet"></td>
         <td data-cell="category"></td>
-        <td data-cell="amount"></td>
+        <td data-cell="amount" class="amount-serif"></td>
         <td class="table-actions">
           <button class="small-button" data-action="edit" type="button">Editar</button>
           <button class="small-button small-button--danger" data-action="delete" type="button">Eliminar</button>

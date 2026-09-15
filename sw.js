@@ -1,4 +1,4 @@
-const CACHE_NAME = "gestor-gastos-v3";
+const CACHE_NAME = "gestor-gastos-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const ASSETS = [
   "./js/categories.js",
   "./js/dashboard.js",
   "./js/charts.js",
+  "./js/wallets.js",
   "./js/notifications.js",
   "./manifest.webmanifest",
 ];
