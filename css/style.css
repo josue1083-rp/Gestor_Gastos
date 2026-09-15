@@ -341,9 +341,17 @@ td small {
   background: linear-gradient(135deg, var(--primary), #7c3aed);
   border: 0;
   border-radius: 999px;
-  box-shadow: 0 10px 25px var(--shadow);
+  box-shadow: var(--shadow);
   font-size: 2rem;
   font-weight: 300;
+  display: grid;
+  place-items: center;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.floating-button:hover {
+  transform: scale(1.07);
+  opacity: 0.92;
 }
 
 .modal {
@@ -439,7 +447,7 @@ td small {
 }
 
 .settings-grid {
-  grid-template-columns: minmax(240px, 0.85fr) minmax(360px, 1.25fr);
+  grid-template-columns: minmax(min(240px, 100%), 0.85fr) minmax(min(360px, 100%), 1.25fr);
   align-items: start;
 }
 
@@ -451,6 +459,7 @@ td small {
   background: var(--surface-muted);
   border-radius: 1.2rem;
   min-width: 0;
+  overflow: hidden;
 }
 
 .settings-block:last-child {
@@ -461,12 +470,14 @@ td small {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 4.5rem 3.5rem auto;
   gap: 0.55rem;
+  min-width: 0;
 }
 
 .reminder-form {
   display: grid;
   grid-template-columns: 7.5rem minmax(0, 1fr) auto;
   gap: 0.55rem;
+  min-width: 0;
 }
 
 .category-list {

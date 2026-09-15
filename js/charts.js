@@ -54,10 +54,23 @@ function renderBalanceChart(canvas, transactions, settings) {
 function setupCanvas(canvas) {
   const context = canvas.getContext("2d");
   const ratio = window.devicePixelRatio || 1;
-  const width = canvas.clientWidth || canvas.width;
+
+  // Prefer rendered clientWidth; fallback to parent container width; then HTML attr
+  const rawWidth =
+    canvas.clientWidth ||
+    canvas.parentElement?.clientWidth ||
+    Number(canvas.getAttribute("width")) ||
+    400;
+  const width = Math.max(rawWidth, 120); // guard against 0-width
   const height = Math.round(width * 0.62);
+
   canvas.width = width * ratio;
   canvas.height = height * ratio;
+
+  // Explicitly pin CSS dimensions so the canvas always matches its logical size
+  canvas.style.width = width + "px";
+  canvas.style.height = height + "px";
+
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
   return { context, width, height };
