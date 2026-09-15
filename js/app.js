@@ -225,7 +225,7 @@ function bindEvents() {
 
   // Resize de gráficos
   window.addEventListener("resize", () => {
-    renderCharts(state.transactions, state.categories, state.settings);
+    renderCharts(state.transactions, state.categories, state.settings, state.wallets);
   });
 }
 
@@ -249,7 +249,7 @@ function switchView(viewId) {
   // Si se abre estadísticas, redibujar canvas
   if (targetView === "viewEstadisticas") {
     setTimeout(() => {
-      renderCharts(state.transactions, state.categories, state.settings);
+      renderCharts(state.transactions, state.categories, state.settings, state.wallets);
     }, 50);
   }
 }
@@ -268,7 +268,7 @@ function toggleTheme() {
   state.settings.theme = state.settings.theme === "dark" ? "light" : "dark";
   applyTheme();
   saveState(state);
-  renderCharts(state.transactions, state.categories, state.settings);
+  renderCharts(state.transactions, state.categories, state.settings, state.wallets);
 }
 
 function applyTheme() {
@@ -294,7 +294,7 @@ function render() {
   renderTransactions();
   renderConfigViews();
 
-  renderCharts(state.transactions, state.categories, state.settings);
+  renderCharts(state.transactions, state.categories, state.settings, state.wallets);
 }
 
 /* 1. Vista Principal: Dashboard y Totales */

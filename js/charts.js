@@ -1,7 +1,7 @@
 import { getCategory } from "./categories.js";
 import { formatMoney } from "./dashboard.js";
 
-export function renderCharts(transactions, categories, settings) {
+export function renderCharts(transactions, categories, settings, wallets = []) {
   const categoryCanvas = document.getElementById("categoryChart");
   const incomeExpenseCanvas = document.getElementById("incomeExpenseChart");
   const balanceCanvas = document.getElementById("balanceChart");
@@ -13,7 +13,7 @@ export function renderCharts(transactions, categories, settings) {
     renderIncomeExpenseChart(incomeExpenseCanvas, transactions, settings);
   }
   if (balanceCanvas) {
-    renderBalanceChart(balanceCanvas, transactions, settings);
+    renderBalanceChart(balanceCanvas, transactions, settings, wallets);
   }
 }
 
@@ -51,20 +51,35 @@ function renderIncomeExpenseChart(canvas, transactions, settings) {
   ], settings);
 }
 
-function renderBalanceChart(canvas, transactions, settings) {
+function renderBalanceChart(canvas, transactions, settings, wallets = []) {
+  const initialBalance = wallets.reduce((sum, w) => sum + (Number(w.initialBalance) || 0), 0);
   const sortedTransactions = [...transactions].sort((first, second) => first.date.localeCompare(second.date));
-  let balance = 0;
-  const points = sortedTransactions.map((transaction) => {
-    if (transaction.type === "income") {
-      balance += transaction.amount;
-    } else if (transaction.type === "expense") {
-      balance -= transaction.amount;
+
+  const dailyDeltas = new Map();
+  sortedTransactions.forEach((tx) => {
+    let delta = 0;
+    if (tx.type === "income") delta = tx.amount;
+    else if (tx.type === "expense") delta = -tx.amount;
+
+    if (delta !== 0) {
+      dailyDeltas.set(tx.date, (dailyDeltas.get(tx.date) || 0) + delta);
     }
-    return {
-      label: transaction.date.slice(5),
-      value: balance,
-    };
   });
+
+  let runningBalance = initialBalance;
+  const points = [];
+
+  if (dailyDeltas.size === 0 && initialBalance > 0) {
+    points.push({ label: "Inicio", value: initialBalance });
+  } else {
+    dailyDeltas.forEach((delta, dateText) => {
+      runningBalance += delta;
+      points.push({
+        label: dateText.slice(5),
+        value: runningBalance,
+      });
+    });
+  }
 
   drawLine(canvas, points, settings);
 }
