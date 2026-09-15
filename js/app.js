@@ -151,6 +151,11 @@ function initialize() {
   render();
   registerServiceWorker();
   startNotificationScheduler(() => state.settings);
+
+  // Re-render charts after layout is settled to get accurate canvas clientWidths
+  setTimeout(() => {
+    renderCharts(state.transactions, state.categories, state.settings);
+  }, 150);
 }
 
 function bindEvents() {
