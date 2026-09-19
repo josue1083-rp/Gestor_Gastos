@@ -93,12 +93,12 @@ function setupCanvas(canvas) {
     Number(canvas.getAttribute("width")) ||
     400;
   const width = Math.max(rawWidth, 120);
-  const height = Math.round(width * 0.45); // cleaner aspect ratio for wide charts
+  const height = canvas.id === "balanceChart"
+    ? Math.round(Math.min(width * 0.4, 300))
+    : Math.round(width * 0.55);
 
   canvas.width = width * ratio;
   canvas.height = height * ratio;
-  canvas.style.width = width + "px";
-  canvas.style.height = height + "px";
 
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);

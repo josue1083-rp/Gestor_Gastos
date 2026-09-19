@@ -519,7 +519,7 @@ button {
 /* Charts Panel */
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -528,11 +528,20 @@ button {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--card-radius);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .chart-card h3 {
   margin: 0 0 1rem;
   font-size: 1.05rem;
+}
+
+.chart-card canvas {
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  height: auto !important;
 }
 
 /* Historial y Filtros */
@@ -566,6 +575,7 @@ textarea {
   border-radius: var(--element-radius);
   background: var(--surface);
   color: var(--text);
+  font-size: 16px; /* 16px font-size prevents mobile Safari/Chrome focus auto-zoom */
   outline: none;
   transition: border-color 0.15s ease;
 }
