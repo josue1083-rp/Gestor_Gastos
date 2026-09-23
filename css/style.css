@@ -44,6 +44,12 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -52,6 +58,7 @@ body {
   font-family: var(--font-sans);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
 }
 
 button,
@@ -59,6 +66,7 @@ input,
 select,
 textarea {
   font-family: var(--font-sans);
+  touch-action: manipulation;
 }
 
 button {
@@ -70,6 +78,89 @@ button {
   font-family: var(--font-serif);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+}
+
+/* In-App Notification Banner */
+.notification-banner {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--surface);
+  border-bottom: 2px solid var(--primary);
+  padding: 0.75rem clamp(1rem, 4vw, 2.5rem);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: var(--shadow);
+  animation: slideDown 0.25s ease-out;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.notification-banner[hidden] {
+  display: none !important;
+}
+
+.notification-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.notification-banner__icon {
+  font-size: 1.5rem;
+  animation: bellRing 2s infinite ease-in-out;
+}
+
+@keyframes bellRing {
+  0%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(14deg); }
+  20%, 40% { transform: rotate(-14deg); }
+  50% { transform: rotate(0); }
+}
+
+.notification-banner__text strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.notification-banner__text p {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.notification-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Notification status box in settings */
+.notification-status-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--element-radius);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.notification-status-box.granted {
+  border-color: var(--income);
+  background: var(--income-bg);
+}
+
+.notification-status-box.denied {
+  border-color: var(--expense);
+  background: var(--expense-bg);
 }
 
 /* Header */
@@ -575,9 +666,39 @@ textarea {
   border-radius: var(--element-radius);
   background: var(--surface);
   color: var(--text);
-  font-size: 16px; /* 16px font-size prevents mobile Safari/Chrome focus auto-zoom */
+  font-size: 16px !important; /* Strict 16px to prevent iOS Safari & Android Chrome auto-zoom */
   outline: none;
   transition: border-color 0.15s ease;
+  touch-action: manipulation;
+}
+
+input[type="date"],
+input[type="time"],
+input[type="month"],
+input[type="number"],
+input[type="search"] {
+  font-size: 16px !important;
+  min-height: 2.75rem;
+}
+
+input::-webkit-date-and-time-value {
+  font-size: 16px !important;
+  text-align: left;
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237A6F63' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 1rem;
+  padding-right: 2.25rem;
+  font-size: 16px !important;
+}
+
+.modal input,
+.modal select,
+.modal textarea {
+  font-size: 16px !important;
 }
 
 input:focus,
@@ -898,5 +1019,23 @@ tr:last-child td {
   }
   .form-grid {
     grid-template-columns: 1fr;
+  }
+  .goals-fund-grid {
+    grid-template-columns: 1fr;
+  }
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+  .chart-card {
+    padding: 1rem;
+  }
+  .modal {
+    width: calc(100vw - 1rem);
+    margin: 0.5rem auto;
+    max-height: calc(100dvh - 1rem);
+  }
+  .modal__content {
+    padding: 1.1rem;
+    max-height: calc(100dvh - 1.5rem);
   }
 }

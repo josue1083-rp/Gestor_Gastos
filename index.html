@@ -2,7 +2,7 @@
 <html lang="es" data-theme="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#FAF6F0" />
     <title>Gestor de Gastos Personales</title>
     <link rel="manifest" href="manifest.webmanifest" />
@@ -15,6 +15,21 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
+    <!-- In-App Reminder Alert Banner -->
+    <div class="notification-banner" id="notificationBanner" hidden>
+      <div class="notification-banner__content">
+        <span class="notification-banner__icon">🔔</span>
+        <div class="notification-banner__text">
+          <strong id="notificationBannerTitle">Recordatorio de Gastos</strong>
+          <p id="notificationBannerBody">Es momento de registrar tus movimientos de hoy.</p>
+        </div>
+      </div>
+      <div class="notification-banner__actions">
+        <button class="button button--primary" id="bannerAddExpenseButton" type="button">+ Anotar</button>
+        <button class="icon-button" id="closeBannerButton" type="button" aria-label="Cerrar aviso">✕</button>
+      </div>
+    </div>
+
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
@@ -375,15 +390,25 @@
           <!-- 4.3 Recordatorios PWA -->
           <div class="settings-block">
             <h3>Recordatorios (Máx. 10)</h3>
+            <div class="notification-status-box" id="notificationStatusBox">
+              <span id="notificationStatusIcon">ℹ️</span>
+              <div>
+                <strong id="notificationStatusText">Comprobando permisos...</strong>
+                <p id="notificationStatusHint" class="hint">Para recibir notificaciones al estar cerrada la app, instálala en tu pantalla de inicio.</p>
+              </div>
+            </div>
             <div class="reminder-form">
               <input id="reminderTime" type="time" value="20:00" required />
               <input id="reminderLabel" type="text" maxlength="40" placeholder="Etiqueta recordatorio" />
               <button class="button button--primary" id="saveReminderButton" type="button">Agregar</button>
             </div>
             <div class="reminders-list" id="remindersList"></div>
-            <div style="margin-top: 0.5rem;">
+            <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="button button--secondary" id="testNotificationButton" type="button">
                 🔔 Probar notificación en vivo
+              </button>
+              <button class="button button--ghost" id="enableNotificationsButton" type="button">
+                Permitir avisos
               </button>
             </div>
           </div>

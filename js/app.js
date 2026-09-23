@@ -3,7 +3,15 @@ import { deleteCategory, getCategory, upsertCategory } from "./categories.js";
 import { deleteTransaction, filterTransactions, upsertTransaction } from "./transactions.js";
 import { calculateTotals, calculatePeriodicAverages, formatDate, formatMoney } from "./dashboard.js";
 import { renderCharts } from "./charts.js";
-import { requestNotificationPermission, sendLocalNotification, startNotificationScheduler } from "./notifications.js";
+import {
+  clearAppBadge,
+  getNotificationDiagnostics,
+  requestNotificationPermission,
+  sendLocalNotification,
+  showInAppBanner,
+  startNotificationScheduler,
+  syncRemindersWithServiceWorker,
+} from "./notifications.js";
 import {
   createDefaultWallets,
   getWallet,
@@ -16,6 +24,9 @@ import {
 let state = loadState();
 
 const elements = {
+  // Banner de notificaciones in-app
+  notificationBanner: document.getElementById("notificationBanner"),
+
   // Header y Drawer
   menuButton: document.getElementById("menuButton"),
   closeDrawerButton: document.getElementById("closeDrawerButton"),
@@ -89,6 +100,11 @@ const elements = {
   saveReminderButton: document.getElementById("saveReminderButton"),
   remindersList: document.getElementById("remindersList"),
   testNotificationButton: document.getElementById("testNotificationButton"),
+  enableNotificationsButton: document.getElementById("enableNotificationsButton"),
+  notificationStatusBox: document.getElementById("notificationStatusBox"),
+  notificationStatusIcon: document.getElementById("notificationStatusIcon"),
+  notificationStatusText: document.getElementById("notificationStatusText"),
+  notificationStatusHint: document.getElementById("notificationStatusHint"),
   emergencyFundSettingsForm: document.getElementById("emergencyFundSettingsForm"),
   targetMonthsInput: document.getElementById("targetMonthsInput"),
   customTargetFundInput: document.getElementById("customTargetFundInput"),
@@ -150,12 +166,43 @@ function initialize() {
   switchView(state.settings.activeView || "viewPrincipal");
   render();
   registerServiceWorker();
-  startNotificationScheduler(() => state.settings);
+  clearAppBadge();
+
+  startNotificationScheduler(() => state.settings, (reminder, isCatchup) => {
+    showInAppBanner(
+      reminder.label || "Recordatorio de Gastos",
+      isCatchup
+        ? `Aviso pendiente (${reminder.time}): es momento de anotar tus ingresos y gastos de hoy.`
+        : `Son las ${reminder.time}. No olvides registrar tus movimientos de hoy.`,
+      () => openTransactionModal()
+    );
+  });
+
+  setupChartsObserver();
 
   // Re-render charts after layout is settled to get accurate canvas clientWidths
   setTimeout(() => {
-    renderCharts(state.transactions, state.categories, state.settings);
+    renderCharts(state.transactions, state.categories, state.settings, state.wallets);
   }, 150);
+}
+
+function setupChartsObserver() {
+  const statsView = document.getElementById("viewEstadisticas");
+  if (!statsView || !("ResizeObserver" in window)) return;
+
+  let debounceTimer = null;
+  const observer = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.contentRect.width > 0 && statsView.classList.contains("active")) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          renderCharts(state.transactions, state.categories, state.settings, state.wallets);
+        }, 60);
+      }
+    }
+  });
+
+  observer.observe(statsView);
 }
 
 function bindEvents() {
@@ -214,6 +261,9 @@ function bindEvents() {
   elements.saveCategoryButton.addEventListener("click", handleCategorySave);
   elements.saveReminderButton.addEventListener("click", handleReminderSave);
   elements.testNotificationButton.addEventListener("click", handleTestNotification);
+  if (elements.enableNotificationsButton) {
+    elements.enableNotificationsButton.addEventListener("click", handleEnableNotifications);
+  }
   elements.remindersList.addEventListener("click", handleReminderAction);
   elements.remindersList.addEventListener("change", handleReminderToggle);
 
@@ -253,9 +303,16 @@ function switchView(viewId) {
 
   // Si se abre estadísticas, redibujar canvas
   if (targetView === "viewEstadisticas") {
-    setTimeout(() => {
-      renderCharts(state.transactions, state.categories, state.settings, state.wallets);
-    }, 50);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        renderCharts(state.transactions, state.categories, state.settings, state.wallets);
+      }, 50);
+    });
+  }
+
+  // Si se abre configuración, actualizar estado de notificaciones
+  if (targetView === "viewConfiguracion") {
+    renderNotificationStatus();
   }
 }
 
@@ -492,6 +549,53 @@ function renderConfigViews() {
   renderManageWallets();
   renderCategories();
   renderReminders();
+  renderNotificationStatus();
+}
+
+function renderNotificationStatus() {
+  if (!elements.notificationStatusBox) return;
+
+  const diagnostics = getNotificationDiagnostics();
+  elements.notificationStatusBox.classList.remove("granted", "denied");
+
+  if (!diagnostics.isSupported) {
+    elements.notificationStatusIcon.textContent = "⚠️";
+    elements.notificationStatusText.textContent = "Notificaciones no disponibles en este navegador";
+    elements.notificationStatusHint.textContent = "Usa un navegador compatible (Chrome, Safari iOS 16.4+, Edge) para recibir avisos.";
+    if (elements.enableNotificationsButton) elements.enableNotificationsButton.style.display = "none";
+    return;
+  }
+
+  if (diagnostics.permission === "granted") {
+    elements.notificationStatusBox.classList.add("granted");
+    elements.notificationStatusIcon.textContent = "✅";
+    elements.notificationStatusText.textContent = "Notificaciones activadas y listas";
+    if (diagnostics.isStandalone) {
+      elements.notificationStatusHint.textContent = "Modo App Instalada (PWA): los recordatorios del sistema y sincronización periódica están operativos.";
+    } else {
+      elements.notificationStatusHint.textContent = "💡 Consejo: Instala la aplicación en tu pantalla de inicio para recibir recordatorios incluso con el navegador cerrado.";
+    }
+    if (elements.enableNotificationsButton) elements.enableNotificationsButton.style.display = "none";
+  } else if (diagnostics.permission === "denied") {
+    elements.notificationStatusBox.classList.add("denied");
+    elements.notificationStatusIcon.textContent = "🚫";
+    elements.notificationStatusText.textContent = "Permisos bloqueados en el navegador";
+    elements.notificationStatusHint.textContent = "Para recibir avisos, ve a Configuración del sitio / Ajustes de Safari y cambia Notificaciones a 'Permitir'.";
+    if (elements.enableNotificationsButton) elements.enableNotificationsButton.style.display = "none";
+  } else {
+    elements.notificationStatusIcon.textContent = "ℹ️";
+    elements.notificationStatusText.textContent = "Permisos de notificación pendientes";
+    elements.notificationStatusHint.textContent = "Presiona 'Permitir avisos' para que la app pueda recordarte registrar tus gastos.";
+    if (elements.enableNotificationsButton) elements.enableNotificationsButton.style.display = "inline-block";
+  }
+}
+
+async function handleEnableNotifications() {
+  const granted = await requestNotificationPermission();
+  renderNotificationStatus();
+  if (granted) {
+    syncRemindersWithServiceWorker(state.settings.reminders);
+  }
 }
 
 function renderManageWallets() {
@@ -660,6 +764,7 @@ function handleTransactionSubmit(event) {
     });
 
     elements.transactionModal.close();
+    clearAppBadge();
     render();
   } catch (error) {
     alert(error.message);
@@ -707,6 +812,7 @@ function handleQuickTransferSubmit(event) {
     });
 
     elements.transferModal.close();
+    clearAppBadge();
     render();
   } catch (error) {
     alert(error.message);
@@ -958,6 +1064,7 @@ async function handleReminderSave() {
   ];
   elements.reminderLabel.value = "";
   render();
+  syncRemindersWithServiceWorker(state.settings.reminders);
 }
 
 function handleReminderToggle(event) {
@@ -968,6 +1075,7 @@ function handleReminderToggle(event) {
     r.id === reminderId ? { ...r, enabled: target.checked } : r
   );
   render();
+  syncRemindersWithServiceWorker(state.settings.reminders);
 }
 
 function handleReminderAction(event) {
@@ -977,6 +1085,7 @@ function handleReminderAction(event) {
   if (button.dataset.action === "delete-reminder") {
     state.settings.reminders = (state.settings.reminders || []).filter((r) => r.id !== reminderId);
     render();
+    syncRemindersWithServiceWorker(state.settings.reminders);
   }
 }
 
@@ -1090,6 +1199,11 @@ function debounce(fn, delay = 200) {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch(() => undefined);
+    navigator.serviceWorker
+      .register("sw.js")
+      .then(() => {
+        syncRemindersWithServiceWorker(state.settings.reminders);
+      })
+      .catch(() => undefined);
   }
 }
