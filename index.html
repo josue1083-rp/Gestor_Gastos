@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#FAF6F0" />
     <title>Gestor de Gastos Personales</title>
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -50,6 +51,9 @@
           <span>Saldo actual</span>
           <strong id="headerBalance" class="amount-serif">$0.00</strong>
         </div>
+        <button class="sync-badge-button" id="manualSyncButton" type="button" aria-label="Sincronizar pendientes" title="Sincronizar movimientos pendientes con el servidor" hidden>
+          ☁️ <span id="pendingCountBadge" class="sync-badge">0</span>
+        </button>
         <button class="icon-button" id="themeToggleButton" type="button" aria-label="Cambiar tema">
           🌙
         </button>

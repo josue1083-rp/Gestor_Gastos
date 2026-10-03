@@ -1,4 +1,5 @@
 import { clearState, createId, exportState, importState, loadState, saveState } from "./storage.js";
+import { countPendingTransactions, savePendingTransaction } from "./db.js";
 import { deleteCategory, getCategory, upsertCategory } from "./categories.js";
 import { deleteTransaction, filterTransactions, upsertTransaction } from "./transactions.js";
 import { calculateTotals, calculatePeriodicAverages, formatDate, formatMoney } from "./dashboard.js";
@@ -35,6 +36,8 @@ const elements = {
   themeToggleButton: document.getElementById("themeToggleButton"),
   settingsNavButton: document.getElementById("settingsNavButton"),
   headerBalance: document.getElementById("headerBalance"),
+  manualSyncButton: document.getElementById("manualSyncButton"),
+  pendingCountBadge: document.getElementById("pendingCountBadge"),
   navLinks: document.querySelectorAll(".nav-link"),
   viewSections: document.querySelectorAll(".view-section"),
 
@@ -167,6 +170,7 @@ function initialize() {
   render();
   registerServiceWorker();
   clearAppBadge();
+  updatePendingSyncUI();
 
   startNotificationScheduler(() => state.settings, (reminder, isCatchup) => {
     showInAppBanner(
@@ -237,6 +241,18 @@ function bindEvents() {
   elements.quickTransferButton.addEventListener("click", openQuickTransferModal);
   elements.newGoalButton.addEventListener("click", () => openGoalModal());
   elements.manageFundButton.addEventListener("click", openFundContributionModal);
+
+  // Botón manual de sincronización y detector de conexión online
+  if (elements.manualSyncButton) {
+    elements.manualSyncButton.addEventListener("click", () => {
+      triggerPendingSync();
+    });
+  }
+
+  window.addEventListener("online", () => {
+    console.info("Dispositivo reconectado a internet: iniciando sincronización...");
+    triggerPendingSync();
+  });
 
   // Formularios
   elements.transactionForm.addEventListener("submit", handleTransactionSubmit);
@@ -764,7 +780,7 @@ function handleTransactionSubmit(event) {
     const type = elements.transactionType.value;
     const existingTransaction = state.transactions.find((t) => t.id === elements.transactionId.value);
 
-    state.transactions = upsertTransaction(state.transactions, {
+    const transactionPayload = {
       id: elements.transactionId.value,
       type,
       amount: elements.transactionAmount.value,
@@ -778,11 +794,16 @@ function handleTransactionSubmit(event) {
       description: elements.transactionDescription.value,
       notes: elements.transactionNotes.value,
       createdAt: existingTransaction?.createdAt,
-    });
+    };
+
+    state.transactions = upsertTransaction(state.transactions, transactionPayload);
 
     elements.transactionModal.close();
     clearAppBadge();
     render();
+
+    // Intentar envío online con fallback a IndexedDB + Background Sync si falla
+    syncOrQueueTransaction(transactionPayload);
   } catch (error) {
     alert(error.message);
   }
@@ -817,7 +838,7 @@ function handleQuickTransferSubmit(event) {
     const sourceWallet = getWallet(state.wallets, sourceId);
     const targetWallet = getWallet(state.wallets, targetId);
 
-    state.transactions = upsertTransaction(state.transactions, {
+    const quickPayload = {
       type: "transfer",
       amount,
       walletId: sourceId,
@@ -826,13 +847,103 @@ function handleQuickTransferSubmit(event) {
       description: elements.quickTransferDesc.value.trim() || `Traspaso: ${sourceWallet.name} ➔ ${targetWallet.name}`,
       date: elements.quickTransferDate.value,
       notes: "Transferencia rápida interna",
-    });
+    };
+
+    state.transactions = upsertTransaction(state.transactions, quickPayload);
 
     elements.transferModal.close();
     clearAppBadge();
     render();
+
+    syncOrQueueTransaction(quickPayload);
   } catch (error) {
     alert(error.message);
+  }
+}
+
+/**
+ * Intenta enviar el movimiento al servidor; si falla o no hay conexión,
+ * lo resguarda en IndexedDB y solicita registro en Background Sync.
+ */
+async function syncOrQueueTransaction(payload) {
+  try {
+    if (!navigator.onLine) {
+      throw new Error("Dispositivo sin conexión a internet.");
+    }
+
+    // Ping / validación de conectividad al servidor
+    const response = await fetch("./?sync-ping=" + Date.now(), { method: "HEAD", cache: "no-store" });
+    if (!response.ok) {
+      throw new Error("Servidor no disponible");
+    }
+  } catch (networkError) {
+    console.info("Red no disponible. Almacenando en IndexedDB para Background Sync:", networkError.message);
+    try {
+      await savePendingTransaction(payload);
+      await updatePendingSyncUI();
+
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        if ("sync" in registration) {
+          try {
+            await registration.sync.register("sincronizar-gasto");
+            console.info("Evento Background Sync 'sincronizar-gasto' registrado");
+          } catch (syncErr) {
+            // Fallback si no está habilitado
+          }
+        }
+      }
+    } catch (idbErr) {
+      console.warn("No se pudo encolar en IndexedDB o registrar Sync:", idbErr);
+    }
+  }
+}
+
+/**
+ * Consulta la cantidad de transacciones en cola en IndexedDB y actualiza el botón/indicador de la UI.
+ */
+async function updatePendingSyncUI() {
+  try {
+    const count = await countPendingTransactions();
+    if (elements.manualSyncButton && elements.pendingCountBadge) {
+      if (count > 0) {
+        elements.pendingCountBadge.textContent = count;
+        elements.manualSyncButton.hidden = false;
+      } else {
+        elements.manualSyncButton.hidden = true;
+      }
+    }
+  } catch (err) {
+    // Silencioso
+  }
+}
+
+/**
+ * Dispara la sincronización mediante doble canal:
+ * 1. Background Sync API nativo (SyncManager)
+ * 2. Mensaje postMessage directo al Service Worker para ejecución inmediata y garantizada
+ */
+async function triggerPendingSync() {
+  if (!("serviceWorker" in navigator)) return;
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+
+    // 1. Canal Background Sync
+    if ("sync" in registration) {
+      try {
+        await registration.sync.register("sincronizar-gasto");
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    // 2. Canal postMessage directo e inmediato
+    if (registration.active) {
+      registration.active.postMessage({ type: "SYNC_PENDING_NOW" });
+    }
+  } catch (err) {
+    console.warn("No se pudo solicitar la sincronización al Service Worker:", err);
   }
 }
 
@@ -1221,10 +1332,22 @@ function debounce(fn, delay = 200) {
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker
-      .register("sw.js")
-      .then(() => {
+      .register("./sw.js", { scope: "./" })
+      .then((registration) => {
         syncRemindersWithServiceWorker(state.settings.reminders);
+
+        navigator.serviceWorker.addEventListener("message", (event) => {
+          if (event.data?.type === "SYNC_COMPLETED") {
+            console.info("Service Worker: sincronización en segundo plano completada (" + event.data.count + " movimiento(s))");
+            updatePendingSyncUI();
+          }
+        });
+
+        // Al iniciar la app, si hay conexión y pendientes, sincronizar
+        if (navigator.onLine) {
+          triggerPendingSync();
+        }
       })
-      .catch(() => undefined);
+      .catch((err) => console.warn("Error al registrar Service Worker:", err));
   }
 }

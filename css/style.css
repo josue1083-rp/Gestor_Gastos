@@ -255,6 +255,42 @@ button {
   border-color: var(--primary);
 }
 
+.sync-badge-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  background: var(--surface);
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--element-radius);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.15s ease;
+  animation: pulseSync 2.5s infinite ease-in-out;
+}
+
+.sync-badge-button:hover {
+  background: var(--surface-muted);
+  transform: scale(1.03);
+}
+
+.sync-badge {
+  background: var(--primary);
+  color: white;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+@keyframes pulseSync {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
 /* Navegación y Drawer */
 .drawer-backdrop {
   position: fixed;

@@ -3,8 +3,19 @@
   "short_name": "Gastos",
   "description": "Aplicación local y offline para gestionar finanzas personales con estilo cálido y humano.",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#FAF6F0",
   "theme_color": "#C6633C",
-  "icons": []
+  "lang": "es",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": []
 }
