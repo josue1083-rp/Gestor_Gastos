@@ -1,4 +1,4 @@
-const CACHE_NAME = "gestor-gastos-v6";
+const CACHE_NAME = "gestor-gastos-v7";
 const REMINDERS_CACHE = "gestor-gastos-reminders";
 const ASSETS = [
   "./",
@@ -6,6 +6,7 @@ const ASSETS = [
   "./css/style.css",
   "./js/app.js",
   "./js/db.js",
+  "./js/push.js",
   "./js/storage.js",
   "./js/transactions.js",
   "./js/categories.js",
@@ -100,6 +101,37 @@ self.addEventListener("periodicsync", (event) => {
   if (event.tag === "check-reminders") {
     event.waitUntil(checkWorkerReminders());
   }
+});
+
+// Notificaciones Web Push en segundo plano (Supabase / VAPID)
+// Despierta el dispositivo aunque la app y el navegador estén cerrados
+self.addEventListener("push", (event) => {
+  let data = {
+    title: "Recordatorio de Gastos ⏰",
+    body: "Es momento de anotar tus ingresos y gastos de hoy.",
+    url: "./",
+    tag: "daily-reminder"
+  };
+
+  if (event.data) {
+    try {
+      const json = event.data.json();
+      data = { ...data, ...json };
+    } catch {
+      data.body = event.data.text() || data.body;
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "./icons/icon.svg",
+      badge: "./icons/icon.svg",
+      tag: data.tag || "daily-reminder",
+      renotify: true,
+      data: { url: data.url || "./" }
+    })
+  );
 });
 
 /**

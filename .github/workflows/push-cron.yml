@@ -1,0 +1,21 @@
+name: Disparar Notificaciones Web Push Supabase
+
+on:
+  schedule:
+    # Se ejecuta cada 15 minutos en los minutos :00, :15, :30 y :45
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # Permite dispararlo manualmente con un botón desde GitHub Actions
+
+jobs:
+  trigger-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invocar Edge Function de Supabase
+        run: |
+          if [ -n "${{ secrets.SUPABASE_FUNCTION_URL }}" ]; then
+            curl -s -X POST "${{ secrets.SUPABASE_FUNCTION_URL }}" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+          else
+            echo "Aviso: Configura los Secrets SUPABASE_FUNCTION_URL y SUPABASE_ANON_KEY en GitHub Settings > Secrets."
+          fi

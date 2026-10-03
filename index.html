@@ -417,6 +417,45 @@
             </div>
           </div>
 
+          <!-- 4.4 Notificaciones Web Push (Nube Supabase) -->
+          <div class="settings-block">
+            <h3>Avisos Push con la app cerrada (Supabase)</h3>
+            <p class="hint" style="margin-bottom: 0.75rem;">
+              Despierta tu teléfono a la hora programada incluso con la app y el navegador 100% cerrados (Android e iOS).
+            </p>
+
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap;">
+              <button class="button button--primary" id="subscribePushButton" type="button">
+                🚀 Activar Notificaciones Push en este dispositivo
+              </button>
+              <button class="button button--ghost" id="unsubscribePushButton" type="button" style="display: none;">
+                Desactivar Push
+              </button>
+            </div>
+
+            <details style="margin-top: 0.5rem; font-size: 0.85rem; border: 1px solid var(--border); border-radius: var(--element-radius); padding: 0.65rem;">
+              <summary style="cursor: pointer; font-weight: 600; color: var(--primary);">⚙️ Configuración del Servidor Supabase</summary>
+              <div style="margin-top: 0.75rem; display: grid; gap: 0.5rem;">
+                <label>
+                  Supabase Project URL
+                  <input id="supabaseUrlInput" type="url" placeholder="https://xyzcompany.supabase.co" />
+                </label>
+                <label>
+                  Supabase Anon Key
+                  <input id="supabaseAnonKeyInput" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+                </label>
+                <label>
+                  Edge Function URL (para pruebas y cron)
+                  <input id="supabaseFunctionUrlInput" type="url" placeholder="https://xyzcompany.supabase.co/functions/v1/send-reminders" />
+                </label>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                  <button class="button button--secondary" id="saveSupabaseConfigButton" type="button">Guardar configuración</button>
+                  <button class="button button--ghost" id="testPushFromSupabaseButton" type="button">📡 Enviar Push de prueba ahora</button>
+                </div>
+              </div>
+            </details>
+          </div>
+
           <!-- 4.6 Gestión de Fondo de Emergencia -->
           <div class="settings-block">
             <h3>Fondo de Emergencia</h3>

@@ -1,5 +1,13 @@
 import { clearState, createId, exportState, importState, loadState, saveState } from "./storage.js";
 import { countPendingTransactions, savePendingTransaction } from "./db.js";
+import {
+  getCurrentPushSubscription,
+  getSupabaseConfig,
+  saveSupabaseConfig,
+  sendTestPushFromSupabase,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from "./push.js";
 import { deleteCategory, getCategory, upsertCategory } from "./categories.js";
 import { deleteTransaction, filterTransactions, upsertTransaction } from "./transactions.js";
 import { calculateTotals, calculatePeriodicAverages, formatDate, formatMoney } from "./dashboard.js";
@@ -115,6 +123,15 @@ const elements = {
   importInput: document.getElementById("importInput"),
   clearDataButton: document.getElementById("clearDataButton"),
 
+  // Supabase Web Push
+  subscribePushButton: document.getElementById("subscribePushButton"),
+  unsubscribePushButton: document.getElementById("unsubscribePushButton"),
+  supabaseUrlInput: document.getElementById("supabaseUrlInput"),
+  supabaseAnonKeyInput: document.getElementById("supabaseAnonKeyInput"),
+  supabaseFunctionUrlInput: document.getElementById("supabaseFunctionUrlInput"),
+  saveSupabaseConfigButton: document.getElementById("saveSupabaseConfigButton"),
+  testPushFromSupabaseButton: document.getElementById("testPushFromSupabaseButton"),
+
   // Modales y formularios
   addTransactionButton: document.getElementById("addTransactionButton"),
   transactionModal: document.getElementById("transactionModal"),
@@ -171,6 +188,7 @@ function initialize() {
   registerServiceWorker();
   clearAppBadge();
   updatePendingSyncUI();
+  initSupabasePushUI();
 
   startNotificationScheduler(() => state.settings, (reminder, isCatchup) => {
     showInAppBanner(
@@ -283,6 +301,67 @@ function bindEvents() {
   }
   elements.remindersList.addEventListener("click", handleReminderAction);
   elements.remindersList.addEventListener("change", handleReminderToggle);
+
+  // Supabase Web Push
+  if (elements.saveSupabaseConfigButton) {
+    elements.saveSupabaseConfigButton.addEventListener("click", () => {
+      saveSupabaseConfig({
+        url: elements.supabaseUrlInput.value.trim(),
+        anonKey: elements.supabaseAnonKeyInput.value.trim(),
+        functionUrl: elements.supabaseFunctionUrlInput.value.trim(),
+      });
+      alert("Configuración de Supabase guardada correctamente.");
+    });
+  }
+
+  if (elements.subscribePushButton) {
+    elements.subscribePushButton.addEventListener("click", async () => {
+      try {
+        const time = elements.reminderTime?.value || "20:00";
+        elements.subscribePushButton.disabled = true;
+        elements.subscribePushButton.textContent = "Activando Push...";
+        await subscribeToPush(time);
+        await checkPushSubscriptionStatus();
+        alert("¡Notificaciones Push activadas exitosamente en este dispositivo!");
+      } catch (err) {
+        alert("Error al activar Push: " + err.message);
+        await checkPushSubscriptionStatus();
+      } finally {
+        elements.subscribePushButton.disabled = false;
+      }
+    });
+  }
+
+  if (elements.unsubscribePushButton) {
+    elements.unsubscribePushButton.addEventListener("click", async () => {
+      try {
+        elements.unsubscribePushButton.disabled = true;
+        await unsubscribeFromPush();
+        await checkPushSubscriptionStatus();
+        alert("Suscripción Push cancelada para este dispositivo.");
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        elements.unsubscribePushButton.disabled = false;
+      }
+    });
+  }
+
+  if (elements.testPushFromSupabaseButton) {
+    elements.testPushFromSupabaseButton.addEventListener("click", async () => {
+      try {
+        elements.testPushFromSupabaseButton.disabled = true;
+        elements.testPushFromSupabaseButton.textContent = "Enviando Push...";
+        await sendTestPushFromSupabase();
+        alert("¡Notificación Push de prueba enviada con éxito desde Supabase! Revisa tu dispositivo.");
+      } catch (err) {
+        alert("Error al enviar prueba: " + err.message);
+      } finally {
+        elements.testPushFromSupabaseButton.disabled = false;
+        elements.testPushFromSupabaseButton.textContent = "📡 Enviar Push de prueba ahora";
+      }
+    });
+  }
 
   // Acciones en tablas y listas
   elements.transactionsTable.addEventListener("click", handleTransactionAction);
@@ -944,6 +1023,41 @@ async function triggerPendingSync() {
     }
   } catch (err) {
     console.warn("No se pudo solicitar la sincronización al Service Worker:", err);
+  }
+}
+
+/**
+ * Inicializa los campos de configuración de Supabase y el estado de la suscripción Push.
+ */
+async function initSupabasePushUI() {
+  const config = getSupabaseConfig();
+  if (elements.supabaseUrlInput) elements.supabaseUrlInput.value = config.url || "";
+  if (elements.supabaseAnonKeyInput) elements.supabaseAnonKeyInput.value = config.anonKey || "";
+  if (elements.supabaseFunctionUrlInput) elements.supabaseFunctionUrlInput.value = config.functionUrl || "";
+
+  await checkPushSubscriptionStatus();
+}
+
+/**
+ * Verifica si este navegador está suscrito a Web Push y adapta los botones visuales.
+ */
+async function checkPushSubscriptionStatus() {
+  if (!elements.subscribePushButton) return;
+  try {
+    const sub = await getCurrentPushSubscription();
+    if (sub) {
+      elements.subscribePushButton.textContent = "✅ Push activo en este dispositivo";
+      elements.subscribePushButton.classList.remove("button--primary");
+      elements.subscribePushButton.classList.add("button--secondary");
+      if (elements.unsubscribePushButton) elements.unsubscribePushButton.style.display = "inline-flex";
+    } else {
+      elements.subscribePushButton.textContent = "🚀 Activar Notificaciones Push en este dispositivo";
+      elements.subscribePushButton.classList.add("button--primary");
+      elements.subscribePushButton.classList.remove("button--secondary");
+      if (elements.unsubscribePushButton) elements.unsubscribePushButton.style.display = "none";
+    }
+  } catch {
+    // Silencioso
   }
 }
 
