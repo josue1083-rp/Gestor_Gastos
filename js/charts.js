@@ -242,9 +242,11 @@ function drawBars(canvas, bars, settings) {
     const barHeight = Math.max((bar.value / maxValue) * chartHeight, bar.value > 0 ? 4 : 0);
     const y = chartBottom - barHeight;
 
-    context.fillStyle = bar.color;
-    roundRect(context, x, y, barWidth, barHeight, 6);
-    context.fill();
+    if (bar.value > 0 && barHeight > 0) {
+      context.fillStyle = bar.color;
+      roundRect(context, x, y, barWidth, barHeight, 6);
+      context.fill();
+    }
 
     context.fillStyle = getTextColor();
     context.font = "600 13px Inter, system-ui, sans-serif";
@@ -306,12 +308,18 @@ function drawLine(canvas, points, settings) {
   context.strokeStyle = primaryAccent;
   context.lineWidth = 2.5;
   context.beginPath();
-  points.forEach((point, index) => {
-    const x = paddingLeft + (points.length === 1 ? drawableWidth / 2 : (index / (points.length - 1)) * drawableWidth);
-    const y = paddingTop + drawableHeight * (1 - (point.value - minValue) / range);
-    if (index === 0) context.moveTo(x, y);
-    else context.lineTo(x, y);
-  });
+  if (points.length === 1) {
+    const y = paddingTop + drawableHeight * (1 - (points[0].value - minValue) / range);
+    context.moveTo(paddingLeft, y);
+    context.lineTo(width - paddingRight, y);
+  } else {
+    points.forEach((point, index) => {
+      const x = paddingLeft + (index / (points.length - 1)) * drawableWidth;
+      const y = paddingTop + drawableHeight * (1 - (point.value - minValue) / range);
+      if (index === 0) context.moveTo(x, y);
+      else context.lineTo(x, y);
+    });
+  }
   context.stroke();
 
   // Puntos destacados en la línea
@@ -348,14 +356,16 @@ function drawLine(canvas, points, settings) {
 }
 
 function roundRect(context, x, y, width, height, radius) {
+  if (width <= 0 || height <= 0) return;
+  const r = Math.min(radius, width / 2, height / 2);
   context.beginPath();
-  context.moveTo(x + radius, y);
-  context.lineTo(x + width - radius, y);
-  context.quadraticCurveTo(x + width, y, x + width, y + radius);
+  context.moveTo(x + r, y);
+  context.lineTo(x + width - r, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + r);
   context.lineTo(x + width, y + height);
   context.lineTo(x, y + height);
-  context.lineTo(x, y + radius);
-  context.quadraticCurveTo(x, y, x + radius, y);
+  context.lineTo(x, y + r);
+  context.quadraticCurveTo(x, y, x + r, y);
 }
 
 function getTextColor() {

@@ -254,6 +254,7 @@ function bindEvents() {
 
   // Filtros Historial con Debounce
   const debouncedRenderTransactions = debounce(renderTransactions, 200);
+  elements.filtersForm.addEventListener("submit", (event) => event.preventDefault());
   elements.filtersForm.addEventListener("input", debouncedRenderTransactions);
   elements.filtersForm.addEventListener("change", renderTransactions);
 
@@ -338,6 +339,11 @@ function applyTheme() {
   document.documentElement.dataset.theme = isDark ? "dark" : "light";
   elements.themeToggleButton.textContent = isDark ? "☀️" : "🌙";
   elements.themeSelect.value = state.settings.theme;
+
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute("content", isDark ? "#1C1815" : "#FAF6F0");
+  }
 }
 
 /* ==========================================================
@@ -361,7 +367,7 @@ function render() {
 
 /* 1. Vista Principal: Dashboard y Totales */
 function renderDashboard() {
-  const totals = calculateTotals(state.transactions, state.settings);
+  const totals = calculateTotals(state.transactions, state.settings, state.wallets);
   const currency = state.settings.currency;
 
   elements.headerBalance.textContent = formatMoney(totals.totalBalance, currency);
@@ -674,12 +680,19 @@ function renderReminders() {
    Manejo de Formularios y Modales
    ========================================================== */
 function populateDropdowns() {
+  const selectedCategoryFilter = elements.categoryFilter.value;
+  const selectedWalletFilter = elements.walletFilter.value;
+
   // Categorías
   const catOptions = state.categories
     .map((c) => `<option value="${escapeHTML(c.id)}">${escapeHTML(c.icon)} ${escapeHTML(c.name)}</option>`)
     .join("");
   elements.transactionCategory.innerHTML = catOptions;
   elements.categoryFilter.innerHTML = `<option value="all">Todas las categorías</option>${catOptions}`;
+
+  if (selectedCategoryFilter && (selectedCategoryFilter === "all" || state.categories.some((c) => c.id === selectedCategoryFilter))) {
+    elements.categoryFilter.value = selectedCategoryFilter;
+  }
 
   // Carteras
   const walletOptions = state.wallets
@@ -691,6 +704,10 @@ function populateDropdowns() {
   elements.quickSourceWallet.innerHTML = walletOptions;
   elements.quickTargetWallet.innerHTML = walletOptions;
   elements.walletFilter.innerHTML = `<option value="all">Todas las carteras</option>${walletOptions}`;
+
+  if (selectedWalletFilter && (selectedWalletFilter === "all" || state.wallets.some((w) => w.id === selectedWalletFilter))) {
+    elements.walletFilter.value = selectedWalletFilter;
+  }
 
   // Preseleccionar target wallet diferente de source si es posible
   if (state.wallets.length > 1) {
@@ -947,12 +964,16 @@ function handleWalletManageSubmit(event) {
     const name = elements.manageWalletName.value;
     const type = elements.manageWalletType.value;
     const initialBalance = Number(elements.manageWalletBalance.value) || 0;
+    const existingWallet = state.wallets.find((w) => w.id === id);
 
     state.wallets = upsertWallet(state.wallets, {
       id,
       name,
       type,
       initialBalance,
+      icon: existingWallet?.icon,
+      color: existingWallet?.color,
+      createdAt: existingWallet?.createdAt,
     });
 
     elements.manageWalletId.value = "";
@@ -1127,7 +1148,7 @@ function handleExport() {
   link.href = url;
   link.download = `gestor-gastos-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 async function handleImport(event) {

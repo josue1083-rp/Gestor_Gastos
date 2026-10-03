@@ -1,4 +1,5 @@
-export function calculateTotals(transactions, settings) {
+export function calculateTotals(transactions, settings, wallets = []) {
+  const initialBalance = wallets.reduce((sum, w) => sum + (Number(w.initialBalance) || 0), 0);
   const totalIncome = sumByType(transactions, "income");
   const totalExpenses = sumByType(transactions, "expense");
   const { start, end } = getFinancialMonthRange(new Date(), settings.financialStartDay);
@@ -13,7 +14,7 @@ export function calculateTotals(transactions, settings) {
   return {
     totalIncome,
     totalExpenses,
-    totalBalance: totalIncome - totalExpenses,
+    totalBalance: initialBalance + totalIncome - totalExpenses,
     monthlyIncome,
     monthlyExpenses,
     monthlyBalance: monthlyIncome - monthlyExpenses,
