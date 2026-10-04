@@ -89,10 +89,36 @@ export async function subscribeToPush(reminderTime = "20:00") {
   let subscription = await registration.pushManager.getSubscription();
 
   if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey,
-    });
+    try {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+    } catch (pushErr) {
+      // Intentar limpiar suscripción previa huérfana y reintentar una vez
+      try {
+        const oldSub = await registration.pushManager.getSubscription();
+        if (oldSub) await oldSub.unsubscribe();
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        });
+      } catch (retryErr) {
+        // Mensajes diagnósticos claros según el navegador y entorno
+        const isBrave = navigator.brave !== undefined || navigator.userAgent.includes("Brave");
+        if (isBrave) {
+          throw new Error(
+            "Brave bloquea Google Push por defecto. Actívalo en brave://settings/privacy -> 'Usar los servicios de Google para mensajería push' y reinicia el navegador."
+          );
+        }
+        if (retryErr.message?.includes("push service error")) {
+          throw new Error(
+            "El servicio Push de Google no pudo conectar. Verifica que no estés en modo Incógnito, que accedas por http://localhost:8000 o https://, o revisa chrome://gcm-internals."
+          );
+        }
+        throw retryErr;
+      }
+    }
   }
 
   // 4. Formatear la suscripción para guardarla en Supabase
