@@ -48,6 +48,8 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   touch-action: manipulation;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 body {
@@ -59,6 +61,10 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   touch-action: manipulation;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  position: relative;
 }
 
 button,
@@ -87,13 +93,17 @@ button {
   z-index: 30;
   background: var(--surface);
   border-bottom: 2px solid var(--primary);
-  padding: 0.75rem clamp(1rem, 4vw, 2.5rem);
+  padding: 0.75rem clamp(0.75rem, 3.5vw, 2.5rem);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   box-shadow: var(--shadow);
   animation: slideDown 0.25s ease-out;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 @keyframes slideDown {
@@ -171,11 +181,15 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem clamp(1rem, 4vw, 2.5rem);
+  gap: 0.75rem;
+  padding: 0.85rem clamp(0.75rem, 3.5vw, 2.5rem);
   background: color-mix(in srgb, var(--surface) 92%, transparent);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .header-left {
@@ -382,14 +396,20 @@ button {
 
 /* Shell & Vistas */
 .app-shell {
-  width: min(1320px, 100%);
+  width: 100%;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 1.5rem clamp(1rem, 3.5vw, 2rem) 6rem;
+  padding: 1.5rem clamp(0.75rem, 3.5vw, 2rem) 6rem;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .view-section {
   display: none;
   animation: fadeIn 0.2s ease;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .view-section.active {
@@ -404,9 +424,11 @@ button {
 /* Summary Grid (Principal) */
 .summary-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 1.3fr) repeat(3, minmax(180px, 1fr));
+  grid-template-columns: minmax(min(260px, 100%), 1.3fr) repeat(3, minmax(min(170px, 100%), 1fr));
   gap: 1rem;
   margin-bottom: 1.5rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .summary-card {
@@ -483,9 +505,11 @@ button {
 
 .wallets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
   gap: 1rem;
   margin-bottom: 1.25rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .wallet-card {
@@ -497,6 +521,7 @@ button {
   flex-direction: column;
   gap: 0.5rem;
   transition: transform 0.15s ease, border-color 0.15s ease;
+  min-width: 0;
 }
 
 .wallet-card:hover {
@@ -528,10 +553,12 @@ button {
 /* Subdivisiones de Carteras (5.1, 5.2, 5.3, 5.4) */
 .wallet-subdivisions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
   gap: 0.85rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+  min-width: 0;
+  width: 100%;
 }
 
 .subdivision-card {
@@ -542,6 +569,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .subdivision-card span {
@@ -557,9 +585,11 @@ button {
 /* Metas de Ahorro y Fondo de Emergencia */
 .goals-fund-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 1.25rem;
   margin-bottom: 1.5rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .panel-block {
@@ -617,9 +647,11 @@ button {
 /* Medias Periódicas (Estadísticas) */
 .averages-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: 0.85rem;
   margin-bottom: 1.5rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .average-card {
@@ -748,12 +780,17 @@ textarea:focus {
   border: 1px solid var(--border);
   border-radius: var(--card-radius);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  min-width: 520px;
 }
 
 th {
@@ -992,6 +1029,53 @@ tr:last-child td {
   min-width: 0;
 }
 
+.reminder-presets {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.preset-chip {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.preset-chip:hover {
+  background: var(--surface);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.reminder-status-badge {
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.reminder-status-badge--active {
+  background: rgba(79, 122, 92, 0.15);
+  color: #2e623b;
+}
+
+.reminder-status-badge--disabled {
+  background: rgba(120, 120, 120, 0.15);
+  color: var(--text-muted);
+}
+
 .wallet-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -1049,9 +1133,65 @@ tr:last-child td {
   }
 }
 
+@media (max-width: 680px) {
+  .app-header {
+    gap: 0.5rem;
+    padding: 0.65rem 0.75rem;
+  }
+  .brand p {
+    display: none;
+  }
+  .brand h1 {
+    font-size: 1rem;
+  }
+  .brand__icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1.15rem;
+  }
+  .header-left {
+    gap: 0.4rem;
+    min-width: 0;
+  }
+  .header-right {
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+  .header-balance span {
+    font-size: 0.68rem;
+  }
+  .header-balance strong {
+    font-size: 0.95rem;
+  }
+  .icon-button {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1rem;
+  }
+  .sync-badge-button {
+    height: 2.25rem;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
 @media (max-width: 600px) {
+  .app-shell {
+    padding: 1rem 0.75rem 5.5rem;
+  }
   .summary-grid {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  .wallets-section,
+  .panel-block,
+  .chart-card,
+  .filters-wrap,
+  .settings-block {
+    padding: 1rem;
+  }
+  .subdivision-card {
+    padding: 0.75rem 0.85rem;
   }
   .form-grid {
     grid-template-columns: 1fr;
@@ -1062,11 +1202,28 @@ tr:last-child td {
   .charts-grid {
     grid-template-columns: 1fr;
   }
+  .averages-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+  }
+  .category-form {
+    grid-template-columns: 1fr 1fr;
+  }
+  .category-form input[type="text"] {
+    grid-column: 1 / -1;
+  }
+  .category-form button {
+    grid-column: 1 / -1;
+  }
+  .reminder-form {
+    grid-template-columns: 1fr;
+  }
   .chart-card {
     padding: 1rem;
   }
   .modal {
-    width: calc(100vw - 1rem);
+    width: min(640px, calc(100% - 1rem));
+    max-width: calc(100% - 1rem);
     margin: 0.5rem auto;
     max-height: calc(100dvh - 1rem);
   }

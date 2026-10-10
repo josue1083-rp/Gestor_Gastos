@@ -391,9 +391,9 @@
             <div class="category-list" id="categoriesList"></div>
           </div>
 
-          <!-- 4.3 Recordatorios PWA -->
+          <!-- 4.3 Recordatorios y Horarios Configurables -->
           <div class="settings-block">
-            <h3>Recordatorios (Máx. 10)</h3>
+            <h3>Recordatorios y Horarios (Máx. 10)</h3>
             <div class="notification-status-box" id="notificationStatusBox">
               <span id="notificationStatusIcon">ℹ️</span>
               <div>
@@ -401,27 +401,50 @@
                 <p id="notificationStatusHint" class="hint">Para recibir notificaciones al estar cerrada la app, instálala en tu pantalla de inicio.</p>
               </div>
             </div>
+
+            <!-- Formulario de configuración de horario -->
+            <input id="reminderEditId" type="hidden" />
             <div class="reminder-form">
-              <input id="reminderTime" type="time" value="20:00" required />
-              <input id="reminderLabel" type="text" maxlength="40" placeholder="Etiqueta recordatorio" />
-              <button class="button button--primary" id="saveReminderButton" type="button">Agregar</button>
+              <input id="reminderTime" type="time" value="20:00" required aria-label="Hora del recordatorio" />
+              <input id="reminderLabel" type="text" maxlength="40" placeholder="Etiqueta (ej: Gastos de hoy)" aria-label="Etiqueta del recordatorio" />
+              <div style="display: flex; gap: 0.35rem;">
+                <button class="button button--primary" id="saveReminderButton" type="button">Guardar</button>
+                <button class="button button--ghost" id="cancelReminderEditButton" type="button" style="display: none;" title="Cancelar edición">✕</button>
+              </div>
             </div>
+
+            <!-- Atajos rápidos de horarios -->
+            <div class="reminder-presets">
+              <span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Horarios rápidos:</span>
+              <button class="preset-chip" type="button" data-preset-time="09:00" data-preset-label="Revisión de la mañana">🌅 Mañana 09:00</button>
+              <button class="preset-chip" type="button" data-preset-time="14:00" data-preset-label="Gastos del almuerzo">☀️ Tarde 14:00</button>
+              <button class="preset-chip" type="button" data-preset-time="20:30" data-preset-label="Cierre diario de gastos">🌙 Noche 20:30</button>
+            </div>
+
+            <!-- Lista interactiva de recordatorios -->
             <div class="reminders-list" id="remindersList"></div>
-            <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+
+            <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="button button--secondary" id="testNotificationButton" type="button">
-                🔔 Probar notificación en vivo
+                🔔 Probar notificación completa
+              </button>
+              <button class="button button--secondary" id="testSoundButton" type="button">
+                🎵 Probar sonido y vibración
               </button>
               <button class="button button--ghost" id="enableNotificationsButton" type="button">
                 Permitir avisos
               </button>
             </div>
+            <p class="hint" style="margin-top: 0.5rem;">
+              🔊 Las notificaciones incluyen sonido melódico, vibración háptica y prioridad alta para despertar tu pantalla.
+            </p>
           </div>
 
           <!-- 4.4 Notificaciones Web Push (Nube Supabase) -->
           <div class="settings-block">
             <h3>Avisos Push con la app cerrada (Supabase)</h3>
             <p class="hint" style="margin-bottom: 0.75rem;">
-              Despierta tu teléfono a la hora programada incluso con la app y el navegador 100% cerrados (Android e iOS).
+              Despierta tu teléfono a la hora programada incluso con la app y el navegador 100% cerrados (Android e iOS). Los horarios configurados arriba se sincronizan automáticamente.
             </p>
 
             <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap;">
@@ -666,11 +689,11 @@
       </form>
     </dialog>
 
-    <!-- Modal Aportar al Fondo de Emergencia -->
+    <!-- Modal Aportar / Retirar en Fondo de Emergencia -->
     <dialog class="modal" id="fundContributionModal">
       <form class="modal__content" id="fundContributionForm">
         <div class="modal__header">
-          <h2>Aportar al Fondo de Emergencia</h2>
+          <h2>Fondo de Emergencia</h2>
           <button class="icon-button" type="button" data-close-modal="fundContributionModal" aria-label="Cerrar">
             ✕
           </button>
@@ -683,16 +706,72 @@
               <option value="withdraw">Retirar saldo del fondo (-)</option>
             </select>
           </label>
-          <label class="form-grid__wide">
+          <label class="form-grid__wide" id="fundWalletLabel">
+            Cartera origen (desde dónde sale el dinero)
+            <select id="fundOpWallet" required></select>
+          </label>
+          <label>
             Monto
             <input id="fundOpAmount" type="number" min="0.01" step="0.01" required />
+          </label>
+          <label>
+            Fecha
+            <input id="fundOpDate" type="date" required />
+          </label>
+          <label class="form-grid__wide">
+            Notas adicionales
+            <input id="fundOpNotes" type="text" placeholder="Opcional" maxlength="120" />
           </label>
         </div>
         <div class="modal__actions">
           <button class="button button--ghost" type="button" data-close-modal="fundContributionModal">
             Cancelar
           </button>
-          <button class="button button--primary" type="submit">Confirmar</button>
+          <button class="button button--primary" type="submit">Confirmar movimiento</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Modal Aportar / Retirar en Metas de Ahorro -->
+    <dialog class="modal" id="goalContributionModal">
+      <form class="modal__content" id="goalContributionForm">
+        <div class="modal__header">
+          <h2 id="goalContributionTitle">Aportar a Meta de Ahorro</h2>
+          <button class="icon-button" type="button" data-close-modal="goalContributionModal" aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+        <input id="goalContributionGoalId" type="hidden" />
+        <div class="form-grid">
+          <label class="form-grid__wide">
+            Operación
+            <select id="goalOpType" required>
+              <option value="deposit">Aportar saldo a la meta (+)</option>
+              <option value="withdraw">Retirar saldo de la meta (-)</option>
+            </select>
+          </label>
+          <label class="form-grid__wide" id="goalOpWalletLabel">
+            Cartera origen (desde dónde sale el dinero)
+            <select id="goalOpWallet" required></select>
+          </label>
+          <label>
+            Monto
+            <input id="goalOpAmount" type="number" min="0.01" step="0.01" required />
+          </label>
+          <label>
+            Fecha
+            <input id="goalOpDate" type="date" required />
+          </label>
+          <label class="form-grid__wide">
+            Notas adicionales
+            <input id="goalOpNotes" type="text" placeholder="Opcional" maxlength="120" />
+          </label>
+        </div>
+        <div class="modal__actions">
+          <button class="button button--ghost" type="button" data-close-modal="goalContributionModal">
+            Cancelar
+          </button>
+          <button class="button button--primary" type="submit">Confirmar movimiento</button>
         </div>
       </form>
     </dialog>

@@ -7,6 +7,7 @@ import {
   sendTestPushFromSupabase,
   subscribeToPush,
   unsubscribeFromPush,
+  updatePushSubscriptionSchedules,
 } from "./push.js";
 import { deleteCategory, getCategory, upsertCategory } from "./categories.js";
 import { deleteTransaction, filterTransactions, upsertTransaction } from "./transactions.js";
@@ -15,6 +16,7 @@ import { renderCharts } from "./charts.js";
 import {
   clearAppBadge,
   getNotificationDiagnostics,
+  playNotificationSound,
   requestNotificationPermission,
   sendLocalNotification,
   showInAppBanner,
@@ -108,9 +110,12 @@ const elements = {
   categoriesList: document.getElementById("categoriesList"),
   reminderTime: document.getElementById("reminderTime"),
   reminderLabel: document.getElementById("reminderLabel"),
+  reminderEditId: document.getElementById("reminderEditId"),
+  cancelReminderEditButton: document.getElementById("cancelReminderEditButton"),
   saveReminderButton: document.getElementById("saveReminderButton"),
   remindersList: document.getElementById("remindersList"),
   testNotificationButton: document.getElementById("testNotificationButton"),
+  testSoundButton: document.getElementById("testSoundButton"),
   enableNotificationsButton: document.getElementById("enableNotificationsButton"),
   notificationStatusBox: document.getElementById("notificationStatusBox"),
   notificationStatusIcon: document.getElementById("notificationStatusIcon"),
@@ -174,7 +179,23 @@ const elements = {
   fundContributionModal: document.getElementById("fundContributionModal"),
   fundContributionForm: document.getElementById("fundContributionForm"),
   fundOpType: document.getElementById("fundOpType"),
+  fundOpWallet: document.getElementById("fundOpWallet"),
+  fundWalletLabel: document.getElementById("fundWalletLabel"),
   fundOpAmount: document.getElementById("fundOpAmount"),
+  fundOpDate: document.getElementById("fundOpDate"),
+  fundOpNotes: document.getElementById("fundOpNotes"),
+
+  // Modal Aporte / Retiro en Metas de Ahorro
+  goalContributionModal: document.getElementById("goalContributionModal"),
+  goalContributionForm: document.getElementById("goalContributionForm"),
+  goalContributionTitle: document.getElementById("goalContributionTitle"),
+  goalContributionGoalId: document.getElementById("goalContributionGoalId"),
+  goalOpType: document.getElementById("goalOpType"),
+  goalOpWallet: document.getElementById("goalOpWallet"),
+  goalOpWalletLabel: document.getElementById("goalOpWalletLabel"),
+  goalOpAmount: document.getElementById("goalOpAmount"),
+  goalOpDate: document.getElementById("goalOpDate"),
+  goalOpNotes: document.getElementById("goalOpNotes"),
 };
 
 initialize();
@@ -282,6 +303,15 @@ function bindEvents() {
   elements.transferForm.addEventListener("submit", handleQuickTransferSubmit);
   elements.goalForm.addEventListener("submit", handleGoalSubmit);
   elements.fundContributionForm.addEventListener("submit", handleFundContributionSubmit);
+  if (elements.fundOpType) {
+    elements.fundOpType.addEventListener("change", (e) => updateFundWalletLabel(e.target.value));
+  }
+  if (elements.goalContributionForm) {
+    elements.goalContributionForm.addEventListener("submit", handleGoalContributionSubmit);
+  }
+  if (elements.goalOpType) {
+    elements.goalOpType.addEventListener("change", (e) => updateGoalWalletLabel(e.target.value));
+  }
   elements.emergencyFundSettingsForm.addEventListener("submit", handleFundSettingsSubmit);
   elements.preferencesForm.addEventListener("submit", handlePreferencesSubmit);
   elements.walletManageForm.addEventListener("submit", handleWalletManageSubmit);
@@ -295,12 +325,31 @@ function bindEvents() {
   // Categorías y Recordatorios
   elements.saveCategoryButton.addEventListener("click", handleCategorySave);
   elements.saveReminderButton.addEventListener("click", handleReminderSave);
+  if (elements.cancelReminderEditButton) {
+    elements.cancelReminderEditButton.addEventListener("click", cancelReminderEdit);
+  }
   elements.testNotificationButton.addEventListener("click", handleTestNotification);
+  if (elements.testSoundButton) {
+    elements.testSoundButton.addEventListener("click", handleTestSound);
+  }
   if (elements.enableNotificationsButton) {
     elements.enableNotificationsButton.addEventListener("click", handleEnableNotifications);
   }
   elements.remindersList.addEventListener("click", handleReminderAction);
   elements.remindersList.addEventListener("change", handleReminderToggle);
+
+  // Atajos rápidos de horarios para recordatorios
+  document.querySelectorAll(".preset-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      if (elements.reminderTime && chip.dataset.presetTime) {
+        elements.reminderTime.value = chip.dataset.presetTime;
+      }
+      if (elements.reminderLabel && chip.dataset.presetLabel) {
+        elements.reminderLabel.value = chip.dataset.presetLabel;
+      }
+      elements.reminderTime?.focus();
+    });
+  });
 
   // Supabase Web Push
   if (elements.saveSupabaseConfigButton) {
@@ -317,12 +366,14 @@ function bindEvents() {
   if (elements.subscribePushButton) {
     elements.subscribePushButton.addEventListener("click", async () => {
       try {
-        const time = elements.reminderTime?.value || "20:00";
         elements.subscribePushButton.disabled = true;
         elements.subscribePushButton.textContent = "Activando Push...";
-        await subscribeToPush(time);
+        await subscribeToPush(state.settings.reminders);
         await checkPushSubscriptionStatus();
-        alert("¡Notificaciones Push activadas exitosamente en este dispositivo!");
+        alert(
+          "¡Notificaciones Push activadas exitosamente en este dispositivo!\n\n" +
+          "Tus recordatorios sonarán y despertarán tu pantalla a los horarios fijados, incluso con el navegador y la app cerrados."
+        );
       } catch (err) {
         alert("Error al activar Push: " + err.message);
         await checkPushSubscriptionStatus();
@@ -532,10 +583,11 @@ function renderSavingsGoals() {
       </div>
       <div class="goal-card__footer">
         <span>Meta: ${formatMoney(goal.targetAmount, currency)} ${goal.deadline ? `· Límite: ${goal.deadline}` : ""}</span>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
           <strong>${percent}%</strong>
-          <button class="small-button" data-action="add-to-goal" type="button">+ Aporte</button>
-          <button class="small-button small-button--danger" data-action="delete-goal" type="button">✕</button>
+          <button class="small-button" data-action="deposit-goal" type="button" title="Aportar saldo a esta meta">+ Aporte</button>
+          <button class="small-button" data-action="withdraw-goal" type="button" title="Retirar saldo de esta meta">− Retiro</button>
+          <button class="small-button small-button--danger" data-action="delete-goal" type="button" title="Eliminar meta">✕</button>
         </div>
       </div>
     `;
@@ -750,7 +802,7 @@ function renderReminders() {
   if (reminders.length === 0) {
     const emptyMsg = document.createElement("p");
     emptyMsg.className = "hint";
-    emptyMsg.textContent = "No hay recordatorios configurados.";
+    emptyMsg.textContent = "No hay recordatorios configurados. Agrega uno o toca un horario rápido arriba.";
     elements.remindersList.append(emptyMsg);
     return;
   }
@@ -760,12 +812,24 @@ function renderReminders() {
     item.className = "reminder-item";
     item.dataset.id = reminder.id;
     item.innerHTML = `
-      <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
-        <input type="checkbox" data-action="toggle-reminder" ${reminder.enabled ? "checked" : ""} />
-        <strong>⏰ ${escapeHTML(reminder.time)}</strong>
-        <span style="font-size: 0.85rem;">- ${escapeHTML(reminder.label || "Recordatorio")}</span>
-      </label>
-      <button class="small-button small-button--danger" data-action="delete-reminder" type="button">Eliminar</button>
+      <div style="display:flex; align-items:center; gap:0.6rem; min-width: 0; flex: 1;">
+        <input type="checkbox" data-action="toggle-reminder" ${reminder.enabled ? "checked" : ""} title="Activar/Pausar este horario" />
+        <div style="min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 0.45rem;">
+            <strong>⏰ ${escapeHTML(reminder.time)}</strong>
+            <span class="reminder-status-badge ${reminder.enabled ? "reminder-status-badge--active" : "reminder-status-badge--disabled"}">
+              ${reminder.enabled ? "Activo" : "Pausado"}
+            </span>
+          </div>
+          <small style="display: block; color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${escapeHTML(reminder.label || "Recordatorio de gastos")}
+          </small>
+        </div>
+      </div>
+      <div class="table-actions">
+        <button class="small-button" data-action="edit-reminder" type="button" title="Modificar hora o etiqueta">Editar</button>
+        <button class="small-button small-button--danger" data-action="delete-reminder" type="button" title="Eliminar recordatorio">Eliminar</button>
+      </div>
     `;
     elements.remindersList.append(item);
   });
@@ -798,6 +862,8 @@ function populateDropdowns() {
   elements.transactionTargetWallet.innerHTML = walletOptions;
   elements.quickSourceWallet.innerHTML = walletOptions;
   elements.quickTargetWallet.innerHTML = walletOptions;
+  if (elements.fundOpWallet) elements.fundOpWallet.innerHTML = walletOptions;
+  if (elements.goalOpWallet) elements.goalOpWallet.innerHTML = walletOptions;
   elements.walletFilter.innerHTML = `<option value="all">Todas las carteras</option>${walletOptions}`;
 
   if (selectedWalletFilter && (selectedWalletFilter === "all" || state.wallets.some((w) => w.id === selectedWalletFilter))) {
@@ -1121,41 +1187,208 @@ function handleGoalCardAction(event) {
     return;
   }
 
-  if (button.dataset.action === "add-to-goal") {
-    const rawAmount = prompt(`Monto a sumar a "${goal.name}":`, "500");
-    const amount = Number(rawAmount);
-    if (amount && amount > 0) {
-      goal.currentAmount = (goal.currentAmount || 0) + amount;
-      render();
+  if (button.dataset.action === "deposit-goal" || button.dataset.action === "add-to-goal") {
+    openGoalContributionModal(goal, "deposit");
+    return;
+  }
+
+  if (button.dataset.action === "withdraw-goal") {
+    openGoalContributionModal(goal, "withdraw");
+    return;
+  }
+}
+
+/* Modal Aporte / Retiro en Metas de Ahorro */
+function openGoalContributionModal(goal, defaultOp = "deposit") {
+  if (!elements.goalContributionModal) return;
+  elements.goalContributionForm.reset();
+  elements.goalContributionGoalId.value = goal.id;
+  elements.goalOpType.value = defaultOp;
+  updateGoalWalletLabel(defaultOp);
+  elements.goalOpDate.value = new Date().toISOString().slice(0, 10);
+  elements.goalContributionTitle.textContent = `${defaultOp === "deposit" ? "Aportar a" : "Retirar de"} ${goal.icon} ${goal.name}`;
+  elements.goalContributionModal.showModal();
+}
+
+function updateGoalWalletLabel(opType) {
+  if (elements.goalOpWalletLabel) {
+    const text = opType === "deposit"
+      ? "Cartera origen (desde dónde sale el dinero)"
+      : "Cartera destino (hacia dónde ingresa el dinero)";
+    const textNode = elements.goalOpWalletLabel.childNodes[0];
+    if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+      textNode.textContent = text + "\n            ";
     }
   }
 }
 
+function handleGoalContributionSubmit(event) {
+  event.preventDefault();
+  const goalId = elements.goalContributionGoalId.value;
+  const goal = state.savingsGoals.find((g) => g.id === goalId);
+  if (!goal) return;
+
+  const opType = elements.goalOpType.value;
+  const walletId = elements.goalOpWallet.value;
+  const amount = Number(elements.goalOpAmount.value);
+  const date = elements.goalOpDate.value || new Date().toISOString().slice(0, 10);
+  const notes = elements.goalOpNotes.value.trim();
+
+  if (!walletId) {
+    alert("Por favor selecciona una cartera.");
+    return;
+  }
+
+  if (!amount || amount <= 0) {
+    alert("Ingresa un monto válido mayor a 0.");
+    return;
+  }
+
+  const wallet = getWallet(state.wallets, walletId);
+
+  if (opType === "deposit") {
+    // Aporte: Gasto/egreso desde la cartera hacia la meta de ahorro
+    const transactionPayload = {
+      id: createId(),
+      type: "expense",
+      amount,
+      walletId,
+      sourceWalletId: walletId,
+      targetWalletId: null,
+      categoryId: "savings",
+      date,
+      description: `Aporte a meta: ${goal.name}`,
+      notes: notes || `Destinado a ${goal.icon} ${goal.name} desde ${wallet.name}`,
+      isRecurring: false,
+      recurringFrequency: "none",
+    };
+
+    state.transactions = upsertTransaction(state.transactions, transactionPayload);
+    goal.currentAmount = (goal.currentAmount || 0) + amount;
+    syncOrQueueTransaction(transactionPayload);
+  } else {
+    // Retiro: Ingreso reintegrado a la cartera desde la meta
+    if (amount > (goal.currentAmount || 0)) {
+      alert(`El monto a retirar ($${amount.toFixed(2)}) excede el saldo acumulado en la meta ($${(goal.currentAmount || 0).toFixed(2)}).`);
+      return;
+    }
+
+    const transactionPayload = {
+      id: createId(),
+      type: "income",
+      amount,
+      walletId,
+      sourceWalletId: walletId,
+      targetWalletId: null,
+      categoryId: "savings",
+      date,
+      description: `Retiro de meta: ${goal.name}`,
+      notes: notes || `Reintegro a ${wallet.name} desde meta ${goal.icon} ${goal.name}`,
+      isRecurring: false,
+      recurringFrequency: "none",
+    };
+
+    state.transactions = upsertTransaction(state.transactions, transactionPayload);
+    goal.currentAmount = Math.max(0, (goal.currentAmount || 0) - amount);
+    syncOrQueueTransaction(transactionPayload);
+  }
+
+  elements.goalContributionModal.close();
+  clearAppBadge();
+  render();
+}
+
 /* Modal Fondo de Emergencia */
+function updateFundWalletLabel(opType) {
+  if (elements.fundWalletLabel) {
+    const text = opType === "deposit"
+      ? "Cartera origen (desde dónde sale el dinero)"
+      : "Cartera destino (hacia dónde ingresa el dinero)";
+    const textNode = elements.fundWalletLabel.childNodes[0];
+    if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+      textNode.textContent = text + "\n            ";
+    }
+  }
+}
+
 function openFundContributionModal() {
   elements.fundContributionForm.reset();
+  elements.fundOpType.value = "deposit";
+  updateFundWalletLabel("deposit");
+  elements.fundOpDate.value = new Date().toISOString().slice(0, 10);
   elements.fundContributionModal.showModal();
 }
 
 function handleFundContributionSubmit(event) {
   event.preventDefault();
   const opType = elements.fundOpType.value;
+  const walletId = elements.fundOpWallet.value;
   const amount = Number(elements.fundOpAmount.value);
+  const date = elements.fundOpDate.value || new Date().toISOString().slice(0, 10);
+  const notes = elements.fundOpNotes.value.trim();
 
-  if (!amount || amount <= 0) {
-    alert("Ingresa un monto válido.");
+  if (!walletId) {
+    alert("Por favor selecciona una cartera.");
     return;
   }
 
+  if (!amount || amount <= 0) {
+    alert("Ingresa un monto válido mayor a 0.");
+    return;
+  }
+
+  const wallet = getWallet(state.wallets, walletId);
   state.emergencyFund = state.emergencyFund || { targetMonths: 3, currentAmount: 0, customTarget: 0 };
 
   if (opType === "deposit") {
+    // Aporte: Egreso desde la cartera hacia el fondo de emergencia
+    const transactionPayload = {
+      id: createId(),
+      type: "expense",
+      amount,
+      walletId,
+      sourceWalletId: walletId,
+      targetWalletId: null,
+      categoryId: "savings",
+      date,
+      description: "Aporte a Fondo de Emergencia",
+      notes: notes || `Destinado a reserva de emergencia desde ${wallet.name}`,
+      isRecurring: false,
+      recurringFrequency: "none",
+    };
+
+    state.transactions = upsertTransaction(state.transactions, transactionPayload);
     state.emergencyFund.currentAmount += amount;
+    syncOrQueueTransaction(transactionPayload);
   } else {
+    // Retiro: Ingreso reintegrado a la cartera desde el fondo de emergencia
+    if (amount > state.emergencyFund.currentAmount) {
+      alert(`El monto a retirar ($${amount.toFixed(2)}) excede el saldo acumulado en el fondo ($${state.emergencyFund.currentAmount.toFixed(2)}).`);
+      return;
+    }
+
+    const transactionPayload = {
+      id: createId(),
+      type: "income",
+      amount,
+      walletId,
+      sourceWalletId: walletId,
+      targetWalletId: null,
+      categoryId: "savings",
+      date,
+      description: "Retiro de Fondo de Emergencia",
+      notes: notes || `Reintegro a ${wallet.name} desde fondo de emergencia`,
+      isRecurring: false,
+      recurringFrequency: "none",
+    };
+
+    state.transactions = upsertTransaction(state.transactions, transactionPayload);
     state.emergencyFund.currentAmount = Math.max(0, state.emergencyFund.currentAmount - amount);
+    syncOrQueueTransaction(transactionPayload);
   }
 
   elements.fundContributionModal.close();
+  clearAppBadge();
   render();
 }
 
@@ -1285,35 +1518,55 @@ function resetCategoryForm() {
   elements.categoryColor.value = "#C6633C";
 }
 
-/* Config: Recordatorios */
+/* Config: Recordatorios y Sincronización */
+function cancelReminderEdit() {
+  if (elements.reminderEditId) elements.reminderEditId.value = "";
+  if (elements.reminderLabel) elements.reminderLabel.value = "";
+  if (elements.cancelReminderEditButton) elements.cancelReminderEditButton.style.display = "none";
+  if (elements.saveReminderButton) elements.saveReminderButton.textContent = "Guardar";
+}
+
+async function syncAllReminders(reminders) {
+  syncRemindersWithServiceWorker(reminders);
+  updatePushSubscriptionSchedules(reminders).catch(() => undefined);
+}
+
 async function handleReminderSave() {
   const currentReminders = state.settings.reminders || [];
-  if (currentReminders.length >= 10) {
-    alert("Has alcanzado el límite máximo de 10 recordatorios.");
-    return;
-  }
-
+  const editId = elements.reminderEditId?.value;
   const time = elements.reminderTime.value;
   const label = elements.reminderLabel.value.trim() || "Recordatorio de gastos";
 
   if (!/^\d{2}:\d{2}$/.test(time)) {
-    alert("Selecciona una hora válida.");
+    alert("Selecciona una hora válida en formato HH:MM.");
     return;
   }
 
   const granted = await requestNotificationPermission();
   if (!granted) return;
 
-  state.settings.reminders = [
-    ...currentReminders,
-    { id: createId(), time, label, enabled: true },
-  ];
-  elements.reminderLabel.value = "";
+  if (editId) {
+    state.settings.reminders = currentReminders.map((r) =>
+      r.id === editId ? { ...r, time, label } : r
+    );
+    cancelReminderEdit();
+  } else {
+    if (currentReminders.length >= 10) {
+      alert("Has alcanzado el límite máximo de 10 recordatorios.");
+      return;
+    }
+    state.settings.reminders = [
+      ...currentReminders,
+      { id: createId(), time, label, enabled: true },
+    ];
+    elements.reminderLabel.value = "";
+  }
+
   render();
-  syncRemindersWithServiceWorker(state.settings.reminders);
+  await syncAllReminders(state.settings.reminders);
 }
 
-function handleReminderToggle(event) {
+async function handleReminderToggle(event) {
   const target = event.target;
   if (target.dataset.action !== "toggle-reminder") return;
   const reminderId = target.closest(".reminder-item").dataset.id;
@@ -1321,25 +1574,50 @@ function handleReminderToggle(event) {
     r.id === reminderId ? { ...r, enabled: target.checked } : r
   );
   render();
-  syncRemindersWithServiceWorker(state.settings.reminders);
+  await syncAllReminders(state.settings.reminders);
 }
 
-function handleReminderAction(event) {
+async function handleReminderAction(event) {
   const button = event.target.closest("button");
   if (!button) return;
-  const reminderId = button.closest(".reminder-item").dataset.id;
-  if (button.dataset.action === "delete-reminder") {
-    state.settings.reminders = (state.settings.reminders || []).filter((r) => r.id !== reminderId);
-    render();
-    syncRemindersWithServiceWorker(state.settings.reminders);
+  const item = button.closest(".reminder-item");
+  if (!item) return;
+  const reminderId = item.dataset.id;
+  const reminder = (state.settings.reminders || []).find((r) => r.id === reminderId);
+
+  if (button.dataset.action === "edit-reminder" && reminder) {
+    if (elements.reminderEditId) elements.reminderEditId.value = reminder.id;
+    if (elements.reminderTime) elements.reminderTime.value = reminder.time;
+    if (elements.reminderLabel) elements.reminderLabel.value = reminder.label;
+    if (elements.saveReminderButton) elements.saveReminderButton.textContent = "Actualizar";
+    if (elements.cancelReminderEditButton) {
+      elements.cancelReminderEditButton.style.display = "inline-flex";
+    }
+    elements.reminderTime?.focus();
+    return;
   }
+
+  if (button.dataset.action === "delete-reminder") {
+    if (confirm(`¿Eliminar recordatorio de las ${reminder ? reminder.time : ""}?`)) {
+      if (elements.reminderEditId?.value === reminderId) {
+        cancelReminderEdit();
+      }
+      state.settings.reminders = (state.settings.reminders || []).filter((r) => r.id !== reminderId);
+      render();
+      await syncAllReminders(state.settings.reminders);
+    }
+  }
+}
+
+function handleTestSound() {
+  playNotificationSound();
 }
 
 async function handleTestNotification() {
   const granted = await requestNotificationPermission();
   if (!granted) return;
   const success = await sendLocalNotification("Recordatorio de Prueba 🔔", {
-    body: "¡Las notificaciones del Gestor de Gastos están activadas correctamente!",
+    body: "¡Prueba exitosa! Notificación emitida con sonido melódico y vibración háptica.",
   });
   if (!success) {
     alert("Verifica los permisos de notificación en tu navegador.");

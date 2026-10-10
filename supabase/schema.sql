@@ -8,7 +8,8 @@ create table if not exists public.push_subscriptions (
   endpoint text unique not null,
   p256dh text not null,
   auth text not null,
-  reminder_time text not null default '20:00',
+  reminder_times jsonb not null default '[]'::jsonb,
+  last_notified_dates jsonb not null default '{}'::jsonb,
   timezone text not null default 'America/Santo_Domingo',
   user_label text default 'Dispositivo PWA',
   created_at timestamp with time zone default timezone('utc'::text, now()),
@@ -27,4 +28,4 @@ create policy "Permitir guardar o actualizar suscripciones push"
   with check (true);
 
 -- Índice para búsquedas rápidas por hora de recordatorio
-create index if not exists idx_push_reminder_time on public.push_subscriptions(reminder_time);
+create index if not exists idx_push_reminder_times on public.push_subscriptions using gin (reminder_times);

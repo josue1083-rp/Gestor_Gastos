@@ -56,13 +56,25 @@ Deno.serve(async (req) => {
 
       const payload = JSON.stringify({
         title: "¡Prueba de Push Exitosa! 🎉",
-        body: "Tus notificaciones en segundo plano están 100% configuradas y activas.",
+        body: "Tus notificaciones en segundo plano están 100% configuradas y listas para despertar tu dispositivo.",
         tag: "test-push",
         url: "./",
+        requireInteraction: true,
+        silent: false,
+        sound: "./audio/notification.wav",
+        vibrate: [300, 100, 300, 100, 300],
+        actions: [
+          { action: "open", title: "📝 Registrar Gasto" },
+          { action: "dismiss", title: "Cerrar" },
+        ],
       });
 
-      await webpush.sendNotification(pushSubscription, payload);
-      return new Response(JSON.stringify({ success: true, message: "Notificación de prueba enviada" }), {
+      await webpush.sendNotification(pushSubscription, payload, {
+        urgency: "high",
+        TTL: 86400,
+        headers: { "Urgency": "high" },
+      });
+      return new Response(JSON.stringify({ success: true, message: "Notificación de prueba enviada con prioridad alta" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -83,53 +95,117 @@ Deno.serve(async (req) => {
     for (const sub of subscriptions || []) {
       // Calcular hora local del usuario según su zona horaria
       let userHourStr = "";
+      let userDateStr = "";
       try {
-        const formatter = new Intl.DateTimeFormat("en-US", {
+        const timeFormatter = new Intl.DateTimeFormat("en-US", {
           timeZone: sub.timezone || "America/Santo_Domingo",
           hour: "2-digit",
           minute: "2-digit",
           hour12: false,
         });
-        userHourStr = formatter.format(now); // Ej: "20:00"
+        userHourStr = timeFormatter.format(now); // Ej: "20:00"
+
+        const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+          timeZone: sub.timezone || "America/Santo_Domingo",
+        });
+        userDateStr = dateFormatter.format(now); // Ej: "2026-10-10"
       } catch {
         userHourStr = `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`;
+        userDateStr = now.toISOString().slice(0, 10);
       }
 
-      // Si coincide la hora configurada (o ventana de 15 minutos en el ciclo de cron)
-      const [targetH, targetM] = sub.reminder_time.split(":").map(Number);
-      const [currentH, currentM] = userHourStr.split(":").map(Number);
-      const diffMinutes = (currentH * 60 + currentM) - (targetH * 60 + targetM);
+      // Soportar array de horas simples ["20:00"] u objetos [{ time: "20:00", label: "Cena", enabled: true }]
+      let targetReminders: { time: string; label: string; enabled: boolean }[] = [];
+      try {
+        let rawTimes = sub.reminder_times;
+        if (typeof rawTimes === "string") rawTimes = JSON.parse(rawTimes);
+        if (Array.isArray(rawTimes)) {
+          targetReminders = rawTimes.map((item: any) => {
+            if (typeof item === "string") return { time: item, label: "Recordatorio de Gastos", enabled: true };
+            return {
+              time: item.time || "20:00",
+              label: item.label || "Recordatorio de Gastos",
+              enabled: item.enabled !== false,
+            };
+          });
+        }
+      } catch {
+        targetReminders = [];
+      }
 
-      // Si la hora coincide o pasaron menos de 15 minutos en este tick de cron
-      const isMatch = diffMinutes >= 0 && diffMinutes < 15;
+      const lastNotifiedDates: Record<string, string> = sub.last_notified_dates || {};
+      let updatedDates = false;
 
-      if (isMatch) {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        };
+      for (const reminder of targetReminders) {
+        if (!reminder.enabled || !reminder.time) continue;
+        const timeStr = reminder.time;
 
-        const payload = JSON.stringify({
-          title: "Recordatorio de Gastos ⏰",
-          body: `Son las ${sub.reminder_time}. Es momento de registrar tus ingresos y gastos de hoy.`,
-          tag: `daily-reminder-${sub.id}`,
-          url: "./",
-        });
+        // Evitar duplicados si ya fue notificado hoy en esta misma hora configurada
+        if (lastNotifiedDates[timeStr] === userDateStr) {
+          continue;
+        }
 
-        try {
-          await webpush.sendNotification(pushSubscription, payload);
-          results.push({ id: sub.id, status: "sent" });
-        } catch (err: any) {
-          if (err.statusCode === 410 || err.statusCode === 404) {
-            // El usuario desinstaló la app o revocó el permiso -> marcar para borrar
-            expiredEndpoints.push(sub.endpoint);
-            results.push({ id: sub.id, status: "expired" });
-          } else {
-            results.push({ id: sub.id, status: "error", error: err.message });
+        // Si coincide la hora configurada (o ventana de 15 minutos en el ciclo de cron)
+        const [targetH, targetM] = timeStr.split(":").map(Number);
+        const [currentH, currentM] = userHourStr.split(":").map(Number);
+        const diffMinutes = (currentH * 60 + currentM) - (targetH * 60 + targetM);
+
+        const isMatch = diffMinutes >= 0 && diffMinutes < 15;
+
+        if (isMatch) {
+          const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: {
+              p256dh: sub.p256dh,
+              auth: sub.auth,
+            },
+          };
+
+          const payload = JSON.stringify({
+            title: reminder.label || "Recordatorio de Gastos ⏰",
+            body: `Son las ${timeStr}. Es momento de registrar tus ingresos y gastos de hoy.`,
+            tag: `daily-reminder-${sub.id}-${timeStr}`,
+            url: "./",
+            requireInteraction: true,
+            silent: false,
+            sound: "./audio/notification.wav",
+            vibrate: [300, 100, 300, 100, 300],
+            actions: [
+              { action: "open", title: "📝 Registrar Gasto" },
+              { action: "dismiss", title: "Cerrar" },
+            ],
+          });
+
+          try {
+            await webpush.sendNotification(pushSubscription, payload, {
+              urgency: "high", // Despierta el dispositivo de suspensión/doze mode
+              TTL: 86400,
+              headers: { "Urgency": "high" },
+            });
+            results.push({ id: sub.id, time: timeStr, status: "sent" });
+            lastNotifiedDates[timeStr] = userDateStr;
+            updatedDates = true;
+          } catch (err: any) {
+            if (err.statusCode === 410 || err.statusCode === 404) {
+              if (!expiredEndpoints.includes(sub.endpoint)) {
+                 expiredEndpoints.push(sub.endpoint);
+              }
+              results.push({ id: sub.id, status: "expired" });
+            } else {
+              results.push({ id: sub.id, status: "error", error: err.message });
+            }
           }
+        }
+      }
+
+      if (updatedDates) {
+        try {
+          await supabase
+            .from("push_subscriptions")
+            .update({ last_notified_dates: lastNotifiedDates })
+            .eq("id", sub.id);
+        } catch {
+          // No fatal si la columna no existe aún
         }
       }
     }

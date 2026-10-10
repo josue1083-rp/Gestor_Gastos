@@ -67,10 +67,10 @@ export async function getCurrentPushSubscription() {
 /**
  * Suscribe el navegador a notificaciones Push y guarda la suscripción en Supabase.
  *
- * @param {string} reminderTime - Hora en formato "HH:MM" (ej: "20:00")
+ * @param {Array} reminders - Lista de recordatorios configurados [{ time, label, enabled }] o ["20:00"]
  * @returns {Promise<PushSubscription>}
  */
-export async function subscribeToPush(reminderTime = "20:00") {
+export async function subscribeToPush(reminders = []) {
   if (!isPushSupported()) {
     throw new Error("Tu navegador o dispositivo no soporta Web Push Notifications.");
   }
@@ -121,9 +121,19 @@ export async function subscribeToPush(reminderTime = "20:00") {
     }
   }
 
-  // 4. Formatear la suscripción para guardarla en Supabase
+  // 4. Formatear la suscripción y horarios configurados para guardarlos en Supabase
   const subJson = subscription.toJSON();
   const config = getSupabaseConfig();
+
+  const formattedReminders = Array.isArray(reminders)
+    ? reminders
+        .filter((r) => (typeof r === "object" ? r.enabled !== false : true))
+        .map((r) =>
+          typeof r === "string"
+            ? { time: r, label: "Recordatorio de Gastos", enabled: true }
+            : { time: r.time, label: r.label || "Recordatorio de Gastos", enabled: true }
+        )
+    : [];
 
   if (config.url && config.anonKey) {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Santo_Domingo";
@@ -131,7 +141,7 @@ export async function subscribeToPush(reminderTime = "20:00") {
       endpoint: subscription.endpoint,
       p256dh: subJson.keys?.p256dh || "",
       auth: subJson.keys?.auth || "",
-      reminder_time: reminderTime,
+      reminder_times: formattedReminders,
       timezone,
       user_label: navigator.userAgent.slice(0, 80),
       updated_at: new Date().toISOString(),
@@ -156,6 +166,60 @@ export async function subscribeToPush(reminderTime = "20:00") {
   }
 
   return subscription;
+}
+
+/**
+ * Actualiza los horarios de recordatorios en la nube de Supabase para este dispositivo.
+ * Se llama automáticamente cuando el usuario agrega, edita, activa o desactiva recordatorios.
+ *
+ * @param {Array} reminders - Lista completa de recordatorios configurados por el usuario
+ * @returns {Promise<boolean>}
+ */
+export async function updatePushSubscriptionSchedules(reminders = []) {
+  if (!isPushSupported()) return false;
+
+  const subscription = await getCurrentPushSubscription();
+  if (!subscription) return false;
+
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey) return false;
+
+  const activeReminders = Array.isArray(reminders)
+    ? reminders
+        .filter((r) => (typeof r === "object" ? r.enabled !== false : true))
+        .map((r) =>
+          typeof r === "string"
+            ? { time: r, label: "Recordatorio de Gastos", enabled: true }
+            : { time: r.time, label: r.label || "Recordatorio de Gastos", enabled: true }
+        )
+    : [];
+
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Santo_Domingo";
+  const payload = {
+    reminder_times: activeReminders,
+    timezone,
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    const response = await fetch(
+      `${config.url}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(subscription.endpoint)}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: config.anonKey,
+          Authorization: `Bearer ${config.anonKey}`,
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+    return response.ok;
+  } catch (err) {
+    console.warn("No se pudo actualizar horarios en Supabase:", err);
+    return false;
+  }
 }
 
 /**

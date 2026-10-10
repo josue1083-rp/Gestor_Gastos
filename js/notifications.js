@@ -77,6 +77,61 @@ async function registerBackgroundSync() {
   }
 }
 
+/**
+ * Emite sonido de alerta y vibración física en el dispositivo.
+ * Utiliza Web Audio API sintetizado de alta fidelidad (funciona 100% offline sin red)
+ * con fallback a audio HTML5 y vibración nativa del hardware.
+ */
+export function playNotificationSound() {
+  // 1. Web Audio API sintetizador de campanilla armónica (D5 -> A5 -> D6)
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      const ctx = new AudioCtx();
+      const startTime = ctx.currentTime;
+
+      const playChimeTone = (frequency, delay, duration, gainLevel) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(frequency, startTime + delay);
+
+        // Curva de ganancia con ataque suave y caída armónica
+        gain.gain.setValueAtTime(0.0001, startTime + delay);
+        gain.gain.exponentialRampToValueAtTime(gainLevel, startTime + delay + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + delay + duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(startTime + delay);
+        osc.stop(startTime + delay + duration);
+      };
+
+      playChimeTone(587.33, 0.0, 0.45, 0.35);  // D5
+      playChimeTone(880.00, 0.12, 0.55, 0.45); // A5
+      playChimeTone(1174.66, 0.22, 0.60, 0.25); // D6
+    }
+  } catch {
+    // Fallback a elemento de Audio HTML5
+    try {
+      const audio = new Audio("./audio/notification.wav");
+      audio.volume = 0.85;
+      audio.play().catch(() => undefined);
+    } catch {
+      // Silencioso
+    }
+  }
+
+  // 2. Patrón de vibración táctil en teléfonos móviles
+  if ("vibrate" in navigator) {
+    try {
+      navigator.vibrate([300, 100, 300, 100, 300]);
+    } catch {
+      // Silencioso si no está soportado
+    }
+  }
+}
+
 // Enviar recordatorios actualizados al Service Worker
 export async function syncRemindersWithServiceWorker(reminders) {
   if (!("serviceWorker" in navigator)) return;
@@ -94,8 +149,11 @@ export async function syncRemindersWithServiceWorker(reminders) {
   }
 }
 
-// Enviar notificación del sistema (vía Service Worker o Notification API)
+// Enviar notificación del sistema (vía Service Worker o Notification API) con sonido y vibración
 export async function sendLocalNotification(title, options = {}) {
+  // Reproducir sonido y vibrar dispositivo
+  playNotificationSound();
+
   if (!("Notification" in window) || Notification.permission !== "granted") {
     return false;
   }
@@ -104,7 +162,17 @@ export async function sendLocalNotification(title, options = {}) {
     body: "¡Es momento de registrar tus movimientos del día en Gestor de Gastos!",
     tag: "gestor-gastos-notification",
     renotify: true,
+    requireInteraction: true,
+    silent: false,
+    vibrate: [300, 100, 300, 100, 300],
+    sound: "./audio/notification.wav",
+    icon: "./icons/icon.svg",
+    badge: "./icons/icon.svg",
     data: { url: "./" },
+    actions: [
+      { action: "open", title: "📝 Registrar Gasto" },
+      { action: "dismiss", title: "Cerrar" },
+    ],
     ...options,
   };
 

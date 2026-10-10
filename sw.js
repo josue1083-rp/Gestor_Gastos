@@ -1,4 +1,4 @@
-const CACHE_NAME = "gestor-gastos-v7";
+const CACHE_NAME = "gestor-gastos-v8";
 const REMINDERS_CACHE = "gestor-gastos-reminders";
 const ASSETS = [
   "./",
@@ -16,6 +16,7 @@ const ASSETS = [
   "./js/notifications.js",
   "./icons/icon.svg",
   "./manifest.webmanifest",
+  "./audio/notification.wav",
 ];
 
 self.addEventListener("install", (event) => {
@@ -69,13 +70,15 @@ self.addEventListener("message", (event) => {
   if (event.data.type === "SYNC_REMINDERS") {
     const reminders = event.data.reminders || [];
     event.waitUntil(
-      caches.open(REMINDERS_CACHE).then((cache) => {
-        return cache.put(
+      caches.open(REMINDERS_CACHE).then(async (cache) => {
+        await cache.put(
           new Request("/sw-reminders-data"),
           new Response(JSON.stringify(reminders), {
             headers: { "Content-Type": "application/json" }
           })
         );
+        // Si el navegador soporta Notification Triggers nativos del SO (Chromium)
+        await scheduleNativeNotificationTriggers(reminders);
       })
     );
   }
@@ -110,7 +113,15 @@ self.addEventListener("push", (event) => {
     title: "Recordatorio de Gastos ⏰",
     body: "Es momento de anotar tus ingresos y gastos de hoy.",
     url: "./",
-    tag: "daily-reminder"
+    tag: "daily-reminder",
+    requireInteraction: true,
+    silent: false,
+    sound: "./audio/notification.wav",
+    vibrate: [300, 100, 300, 100, 300],
+    actions: [
+      { action: "open", title: "📝 Registrar Gasto" },
+      { action: "dismiss", title: "Cerrar" }
+    ]
   };
 
   if (event.data) {
@@ -129,7 +140,15 @@ self.addEventListener("push", (event) => {
       badge: "./icons/icon.svg",
       tag: data.tag || "daily-reminder",
       renotify: true,
-      data: { url: data.url || "./" }
+      requireInteraction: data.requireInteraction !== false,
+      silent: false,
+      vibrate: data.vibrate || [300, 100, 300, 100, 300],
+      sound: "./audio/notification.wav",
+      data: { url: data.url || "./", reminderId: data.reminderId },
+      actions: data.actions || [
+        { action: "open", title: "📝 Registrar Gasto" },
+        { action: "dismiss", title: "Cerrar" }
+      ]
     })
   );
 });
@@ -261,9 +280,17 @@ async function checkWorkerReminders() {
             body: `Son las ${reminder.time}. Es momento de registrar tus movimientos de hoy.`,
             tag: `reminder-${reminder.id}`,
             renotify: true,
+            requireInteraction: true,
+            silent: false,
+            vibrate: [300, 100, 300, 100, 300],
+            sound: "./audio/notification.wav",
             icon: "./icons/icon.svg",
             badge: "./icons/icon.svg",
-            data: { url: "./", reminderId: reminder.id }
+            data: { url: "./", reminderId: reminder.id },
+            actions: [
+              { action: "open", title: "📝 Registrar Gasto" },
+              { action: "dismiss", title: "Cerrar" }
+            ]
           });
         }
       }
@@ -273,8 +300,51 @@ async function checkWorkerReminders() {
   }
 }
 
+// Programador nativo de alarmas del SO (Notification Triggers API)
+async function scheduleNativeNotificationTriggers(reminders) {
+  if (!("showTrigger" in Notification.prototype) || typeof TimestampTrigger === "undefined") {
+    return;
+  }
+  try {
+    for (const reminder of reminders) {
+      if (!reminder.enabled || !reminder.time) continue;
+      const [rHour, rMin] = reminder.time.split(":").map(Number);
+      const targetDate = new Date();
+      targetDate.setHours(rHour, rMin, 0, 0);
+      if (targetDate.getTime() <= Date.now()) {
+        targetDate.setDate(targetDate.getDate() + 1);
+      }
+
+      await self.registration.showNotification(reminder.label || "Recordatorio de Gastos ⏰", {
+        body: `Son las ${reminder.time}. Es momento de anotar tus ingresos y gastos de hoy.`,
+        tag: `native-trigger-${reminder.id}`,
+        showTrigger: new TimestampTrigger(targetDate.getTime()),
+        icon: "./icons/icon.svg",
+        badge: "./icons/icon.svg",
+        renotify: true,
+        requireInteraction: true,
+        silent: false,
+        vibrate: [300, 100, 300, 100, 300],
+        sound: "./audio/notification.wav",
+        data: { url: "./", reminderId: reminder.id },
+        actions: [
+          { action: "open", title: "📝 Registrar Gasto" },
+          { action: "dismiss", title: "Cerrar" }
+        ]
+      });
+    }
+  } catch (err) {
+    // Silencioso si no está activada la flag
+  }
+}
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+
+  if (event.action === "dismiss") {
+    return;
+  }
+
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
