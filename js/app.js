@@ -3,6 +3,7 @@ import { countPendingTransactions, savePendingTransaction } from "./db.js";
 import {
   getCurrentPushSubscription,
   getSupabaseConfig,
+  resetSupabaseConfig,
   saveSupabaseConfig,
   sendTestPushFromSupabase,
   subscribeToPush,
@@ -135,6 +136,7 @@ const elements = {
   supabaseAnonKeyInput: document.getElementById("supabaseAnonKeyInput"),
   supabaseFunctionUrlInput: document.getElementById("supabaseFunctionUrlInput"),
   saveSupabaseConfigButton: document.getElementById("saveSupabaseConfigButton"),
+  resetSupabaseConfigButton: document.getElementById("resetSupabaseConfigButton"),
   testPushFromSupabaseButton: document.getElementById("testPushFromSupabaseButton"),
 
   // Modales y formularios
@@ -196,6 +198,10 @@ const elements = {
   goalOpAmount: document.getElementById("goalOpAmount"),
   goalOpDate: document.getElementById("goalOpDate"),
   goalOpNotes: document.getElementById("goalOpNotes"),
+
+  // Modal Política de Privacidad
+  privacyPolicyModal: document.getElementById("privacyPolicyModal"),
+  openPrivacyPolicyButton: document.getElementById("openPrivacyPolicyButton"),
 };
 
 initialize();
@@ -281,6 +287,13 @@ function bindEvents() {
   elements.newGoalButton.addEventListener("click", () => openGoalModal());
   elements.manageFundButton.addEventListener("click", openFundContributionModal);
 
+  // Modal Política de Privacidad
+  if (elements.openPrivacyPolicyButton) {
+    elements.openPrivacyPolicyButton.addEventListener("click", () => {
+      elements.privacyPolicyModal?.showModal();
+    });
+  }
+
   // Botón manual de sincronización y detector de conexión online
   if (elements.manualSyncButton) {
     elements.manualSyncButton.addEventListener("click", () => {
@@ -360,6 +373,16 @@ function bindEvents() {
         functionUrl: elements.supabaseFunctionUrlInput.value.trim(),
       });
       alert("Configuración de Supabase guardada correctamente.");
+    });
+  }
+
+  if (elements.resetSupabaseConfigButton) {
+    elements.resetSupabaseConfigButton.addEventListener("click", () => {
+      const config = resetSupabaseConfig();
+      if (elements.supabaseUrlInput) elements.supabaseUrlInput.value = config.url;
+      if (elements.supabaseAnonKeyInput) elements.supabaseAnonKeyInput.value = config.anonKey;
+      if (elements.supabaseFunctionUrlInput) elements.supabaseFunctionUrlInput.value = config.functionUrl;
+      alert("Configuración restablecida a los valores predeterminados.");
     });
   }
 

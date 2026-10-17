@@ -12,6 +12,16 @@ export const VAPID_PUBLIC_KEY =
 const SUPABASE_CONFIG_KEY = "gestor-gastos-supabase-config";
 
 /**
+ * Configuración predeterminada del servidor Supabase para la app.
+ */
+export const DEFAULT_SUPABASE_CONFIG = {
+  url: "https://iykbaavslzjzbxippahr.supabase.co",
+  anonKey:
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5a2JhYXZzbHpqemJ4aXBwYWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNTQxNjAsImV4cCI6MjEwNjYzMDE2MH0.rdgi2oPvSTMxKN0DzoDQjSJjtbLARFjCzMvBERxF_c8",
+  functionUrl: "https://iykbaavslzjzbxippahr.supabase.co/functions/v1/send-reminders",
+};
+
+/**
  * Convierte una clave VAPID en Base64 URL safe a un Uint8Array para el PushManager.
  */
 function urlB64ToUint8Array(base64String) {
@@ -26,22 +36,35 @@ function urlB64ToUint8Array(base64String) {
 }
 
 /**
- * Obtiene la configuración de Supabase guardada en local.
+ * Obtiene la configuración de Supabase guardada en local (o los valores predeterminados de la app).
  */
 export function getSupabaseConfig() {
   try {
     const raw = localStorage.getItem(SUPABASE_CONFIG_KEY);
-    return raw ? JSON.parse(raw) : { url: "", anonKey: "", functionUrl: "" };
+    const saved = raw ? JSON.parse(raw) : {};
+    return {
+      url: (saved.url && saved.url.trim()) || DEFAULT_SUPABASE_CONFIG.url,
+      anonKey: (saved.anonKey && saved.anonKey.trim()) || DEFAULT_SUPABASE_CONFIG.anonKey,
+      functionUrl: (saved.functionUrl && saved.functionUrl.trim()) || DEFAULT_SUPABASE_CONFIG.functionUrl,
+    };
   } catch {
-    return { url: "", anonKey: "", functionUrl: "" };
+    return { ...DEFAULT_SUPABASE_CONFIG };
   }
 }
 
 /**
- * Guarda la configuración de Supabase.
+ * Guarda la configuración de Supabase personalizada por el usuario.
  */
 export function saveSupabaseConfig(config) {
   localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(config));
+}
+
+/**
+ * Restablece la configuración de Supabase a los valores predeterminados de la app.
+ */
+export function resetSupabaseConfig() {
+  localStorage.removeItem(SUPABASE_CONFIG_KEY);
+  return { ...DEFAULT_SUPABASE_CONFIG };
 }
 
 /**

@@ -457,8 +457,11 @@
             </div>
 
             <details style="margin-top: 0.5rem; font-size: 0.85rem; border: 1px solid var(--border); border-radius: var(--element-radius); padding: 0.65rem;">
-              <summary style="cursor: pointer; font-weight: 600; color: var(--primary);">⚙️ Configuración del Servidor Supabase</summary>
+              <summary style="cursor: pointer; font-weight: 600; color: var(--primary);">⚙️ Configuración del Servidor Supabase (Preconfigurado)</summary>
               <div style="margin-top: 0.75rem; display: grid; gap: 0.5rem;">
+                <p style="margin: 0; color: var(--text-muted); font-size: 0.8rem; line-height: 1.4;">
+                  ✨ <strong>Listo para usar:</strong> La aplicación ya incluye los valores de conexión predeterminados. Solo necesitas pulsar <em>"Activar Notificaciones Push"</em> arriba. Modifica estos campos solo si deseas conectar tu propio proyecto de Supabase.
+                </p>
                 <label>
                   Supabase Project URL
                   <input id="supabaseUrlInput" type="url" placeholder="https://xyzcompany.supabase.co" />
@@ -472,7 +475,8 @@
                   <input id="supabaseFunctionUrlInput" type="url" placeholder="https://xyzcompany.supabase.co/functions/v1/send-reminders" />
                 </label>
                 <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap;">
-                  <button class="button button--secondary" id="saveSupabaseConfigButton" type="button">Guardar configuración</button>
+                  <button class="button button--secondary" id="saveSupabaseConfigButton" type="button">Guardar cambios</button>
+                  <button class="button button--ghost" id="resetSupabaseConfigButton" type="button">Restablecer predeterminados</button>
                   <button class="button button--ghost" id="testPushFromSupabaseButton" type="button">📡 Enviar Push de prueba ahora</button>
                 </div>
               </div>
@@ -513,6 +517,13 @@
               </button>
             </div>
             <p class="hint">Tus datos se guardan estrictamente en tu navegador de forma offline.</p>
+          </div>
+
+          <!-- 4.8 Política de Privacidad -->
+          <div class="settings-block" style="text-align: center; padding-top: 0.25rem;">
+            <button class="button button--ghost" id="openPrivacyPolicyButton" type="button" style="font-size: 0.8rem; opacity: 0.7;">
+              🔒 Política de Privacidad
+            </button>
           </div>
         </div>
       </section>
@@ -774,6 +785,54 @@
           <button class="button button--primary" type="submit">Confirmar movimiento</button>
         </div>
       </form>
+    </dialog>
+
+    <!-- Modal Política de Privacidad -->
+    <dialog class="modal" id="privacyPolicyModal">
+      <div class="modal__content">
+        <div class="modal__header">
+          <h2>🔒 Política de Privacidad</h2>
+          <button class="icon-button" type="button" data-close-modal="privacyPolicyModal" aria-label="Cerrar">
+            ✕
+          </button>
+        </div>
+        <div style="overflow-y: auto; max-height: 65vh; padding: 0 0.25rem; line-height: 1.7; font-size: 0.92rem;">
+          <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1rem;">Última actualización: octubre 2026</p>
+
+          <h3 style="margin: 1rem 0 0.4rem;">1. ¿Qué datos recopilamos?</h3>
+          <p>Gestor de Gastos recopila únicamente los datos mínimos necesarios para el funcionamiento de las notificaciones push:</p>
+          <ul style="padding-left: 1.25rem; margin: 0.5rem 0;">
+            <li><strong>Endpoint de suscripción push</strong>: una URL técnica que identifica tu dispositivo ante el servicio de mensajería del navegador (Google FCM en Android, APNs en iOS).</li>
+            <li><strong>Claves criptográficas del navegador</strong> (<code>p256dh</code> y <code>auth</code>): usadas para cifrar el contenido de los mensajes. No son tus contraseñas ni datos personales.</li>
+            <li><strong>Zona horaria</strong>: para enviar los recordatorios a la hora correcta según tu ubicación.</li>
+            <li><strong>Horarios de recordatorio</strong>: las horas que tú mismo configuras (p. ej. "20:00").</li>
+          </ul>
+
+          <h3 style="margin: 1rem 0 0.4rem;">2. ¿Qué datos NO recopilamos?</h3>
+          <ul style="padding-left: 1.25rem; margin: 0.5rem 0;">
+            <li>No recopilamos tu nombre, correo, teléfono ni ningún dato de identificación personal.</li>
+            <li>No accedemos a tus transacciones, saldos ni datos financieros. Toda esa información vive exclusivamente en tu navegador (localStorage).</li>
+            <li>No usamos cookies de seguimiento ni herramientas de analítica de terceros.</li>
+          </ul>
+
+          <h3 style="margin: 1rem 0 0.4rem;">3. ¿Dónde se almacenan los datos?</h3>
+          <p>Los datos de suscripción push se almacenan en una base de datos privada de <strong>Supabase</strong> (supabase.com), alojada en servidores seguros. Supabase cumple con los estándares SOC 2 Tipo II.</p>
+          <p>Todos tus datos financieros se almacenan <strong>localmente en tu dispositivo</strong> y nunca se transmiten a ningún servidor.</p>
+
+          <h3 style="margin: 1rem 0 0.4rem;">4. ¿Con quién compartimos los datos?</h3>
+          <p>No compartimos tus datos con terceros. Los datos de suscripción push solo se usan para enviarte los recordatorios que tú mismo configuras, a través de la infraestructura estándar de notificaciones de tu sistema operativo.</p>
+
+          <h3 style="margin: 1rem 0 0.4rem;">5. ¿Puedes eliminar tus datos?</h3>
+          <p>Sí. Puedes desactivar las notificaciones push en cualquier momento desde la sección de configuración (botón "Desactivar Push"). Esto eliminará automáticamente tu suscripción de la base de datos.</p>
+          <p>Para eliminar todos los datos de la app, usa el botón "Eliminar todos los datos" en la sección de respaldo.</p>
+
+          <h3 style="margin: 1rem 0 0.4rem;">6. Contacto</h3>
+          <p>Esta es una aplicación personal de uso limitado. Para cualquier consulta, contacta directamente al administrador de la app.</p>
+        </div>
+        <div class="modal__actions">
+          <button class="button button--primary" type="button" data-close-modal="privacyPolicyModal">Entendido</button>
+        </div>
+      </div>
     </dialog>
 
     <!-- Template de Fila de Transacción -->
