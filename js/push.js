@@ -7,7 +7,7 @@
  */
 
 export const VAPID_PUBLIC_KEY =
-  "BMwUSE4fje4NPjt8j2Dg-mEqI76sZIRLNK4aEFQfuOT163_jV4hV-Vc0nI3i1kE1vzr8xKZU6-2_WNWT83f8NAw";
+  "BNPtF-_t3D-BtlqywY5lZ3YxEf1fDbUPo560PqbR10nIVsHvl8cVH3RaQhm6mhgyGLyroSBWacS79WYk7qcHieI";
 
 const SUPABASE_CONFIG_KEY = "gestor-gastos-supabase-config";
 
