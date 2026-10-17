@@ -71,14 +71,38 @@ Deno.serve(async (req) => {
         ],
       });
 
-      await webpush.sendNotification(pushSubscription, payload, {
-        urgency: "high",
-        TTL: 86400,
-        headers: { "Urgency": "high" },
-      });
-      return new Response(JSON.stringify({ success: true, message: "Notificación de prueba enviada con prioridad alta" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      try {
+        await webpush.sendNotification(pushSubscription, payload, {
+          urgency: "high",
+          TTL: 86400,
+          headers: { "Urgency": "high" },
+        });
+        return new Response(JSON.stringify({ success: true, message: "Notificación de prueba enviada con prioridad alta" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (pushErr: any) {
+        console.error("Error al enviar push de prueba:", pushErr);
+        const reason = typeof pushErr.body === "string" ? pushErr.body : JSON.stringify(pushErr.body || "");
+        let suggestion = "";
+
+        if (pushErr.statusCode === 400 || reason.includes("BadJwtToken")) {
+          suggestion = "Apple APNs rechazó el JWT (400 BadJwtToken). Verifica que VAPID_SUBJECT en Supabase Secrets sea un email real (ej: mailto:tu-email@gmail.com).";
+        } else if (pushErr.statusCode === 403) {
+          suggestion = "Apple APNs denegó el acceso (403 Forbidden). Verifica que VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en Supabase Secrets correspondan a las claves de la app.";
+        } else if (pushErr.statusCode === 410 || pushErr.statusCode === 404) {
+          suggestion = "La suscripción en este iPhone ha expirado o fue revocada por Apple. Desactiva y vuelve a activar Push en la app.";
+        }
+
+        return new Response(
+          JSON.stringify({
+            error: pushErr.message,
+            statusCode: pushErr.statusCode || null,
+            details: pushErr.body || null,
+            suggestion: suggestion || undefined,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Consulta de todas las suscripciones activas

@@ -98,6 +98,22 @@ export async function subscribeToPush(reminders = []) {
     throw new Error("Tu navegador o dispositivo no soporta Web Push Notifications.");
   }
 
+  // 0. En iOS (iPhone/iPad), Web Push solo funciona si la app se agregó a la pantalla de inicio
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+  if (isIOS && !isStandalone) {
+    throw new Error(
+      "En iPhone/iOS las notificaciones Push solo funcionan si agregas la app a la Pantalla de Inicio:\n\n" +
+        "1. Toca el botón Compartir de Safari (icono del cuadrado con la flecha hacia arriba).\n" +
+        "2. Elige 'Agregar a pantalla de inicio'.\n" +
+        "3. Abre la app desde el nuevo icono en tu pantalla y vuelve a pulsar 'Activar Push'."
+    );
+  }
+
   // 1. Pedir permiso de notificaciones
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
@@ -134,9 +150,14 @@ export async function subscribeToPush(reminders = []) {
             "Brave bloquea Google Push por defecto. Actívalo en brave://settings/privacy -> 'Usar los servicios de Google para mensajería push' y reinicia el navegador."
           );
         }
+        if (retryErr.message?.includes("unexpected response code")) {
+          throw new Error(
+            "Apple APNs rechazó la suscripción (unexpected response code). Asegúrate de tener la app agregada a la Pantalla de Inicio, usar iOS 16.4 o superior y acceder con HTTPS válido."
+          );
+        }
         if (retryErr.message?.includes("push service error")) {
           throw new Error(
-            "El servicio Push de Google no pudo conectar. Verifica que no estés en modo Incógnito, que accedas por http://localhost:8000 o https://, o revisa chrome://gcm-internals."
+            "El servicio Push no pudo conectar. Verifica que no estés en modo Incógnito y que accedas por https:// o http://localhost:8000."
           );
         }
         throw retryErr;
