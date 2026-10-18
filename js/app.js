@@ -1756,6 +1756,11 @@ function registerServiceWorker() {
             console.info("Service Worker: sincronización en segundo plano completada (" + event.data.count + " movimiento(s))");
             updatePendingSyncUI();
           }
+
+          if (event.data?.type === "NOTIFICATION_CLICKED") {
+            // Si el usuario tocó la notificación o el botón "Registrar Gasto", abrir modal
+            openTransactionModal();
+          }
         });
 
         // Al iniciar la app, si hay conexión y pendientes, sincronizar

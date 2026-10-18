@@ -1,4 +1,4 @@
-const CACHE_NAME = "gestor-gastos-v8";
+const CACHE_NAME = "gestor-gastos-v9";
 const REMINDERS_CACHE = "gestor-gastos-reminders";
 const ASSETS = [
   "./",

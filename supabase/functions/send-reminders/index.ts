@@ -172,12 +172,19 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Si coincide la hora configurada (o ventana de 15 minutos en el ciclo de cron)
+        // Si coincide la hora configurada (tolerancia de hasta 30 min por retrasos de cron y cruce de medianoche)
         const [targetH, targetM] = timeStr.split(":").map(Number);
         const [currentH, currentM] = userHourStr.split(":").map(Number);
-        const diffMinutes = (currentH * 60 + currentM) - (targetH * 60 + targetM);
+        let diffMinutes = (currentH * 60 + currentM) - (targetH * 60 + targetM);
+        
+        // Manejo de cruce de medianoche (ej: target 23:55 y cron corre a 00:05 => diff 10 min)
+        if (diffMinutes < -720) {
+          diffMinutes += 1440;
+        } else if (diffMinutes > 720) {
+          diffMinutes -= 1440;
+        }
 
-        const isMatch = diffMinutes >= 0 && diffMinutes < 15;
+        const isMatch = diffMinutes >= 0 && diffMinutes < 30;
 
         if (isMatch) {
           const pushSubscription = {

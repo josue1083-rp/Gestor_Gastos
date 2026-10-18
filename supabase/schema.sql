@@ -29,3 +29,35 @@ create policy "Permitir guardar o actualizar suscripciones push"
 
 -- Índice para búsquedas rápidas por hora de recordatorio
 create index if not exists idx_push_reminder_times on public.push_subscriptions using gin (reminder_times);
+
+-- ==============================================================================
+-- Automatización interna con pg_cron + pg_net (Sin depender de GitHub Actions)
+-- ==============================================================================
+-- Ejecutar en el SQL Editor de tu Dashboard de Supabase:
+--
+-- 1. Habilitar extensiones necesarias:
+-- create extension if not exists pg_cron;
+-- create extension if not exists pg_net;
+--
+-- 2. Programar el cron job para ejecutar la Edge Function cada 15 minutos:
+-- select cron.schedule(
+--   'invocar-send-reminders-cada-15m',
+--   '*/15 * * * *',
+--   $$
+--   select net.http_post(
+--     url := 'https://iykbaavslzjzbxippahr.supabase.co/functions/v1/send-reminders',
+--     headers := jsonb_build_object(
+--       'Content-Type', 'application/json',
+--       'Authorization', 'Bearer TU_SERVICE_ROLE_O_ANON_KEY_AQUI'
+--     ),
+--     body := '{}'::jsonb
+--   ) as request_id;
+--   $$
+-- );
+--
+-- 3. Para verificar los cron jobs activos:
+-- select * from cron.job;
+--
+-- 4. Para ver el historial de ejecuciones:
+-- select * from cron.job_run_details order by start_time desc limit 10;
+
